@@ -57,7 +57,7 @@ export function BillFilters() {
     <div className="flex flex-wrap items-center gap-4">
       <div className="w-full max-w-[200px]">
         <Select value={status} onValueChange={handleStatusChange}>
-          <SelectTrigger>
+          <SelectTrigger aria-label="Filter bills by status">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -72,6 +72,7 @@ export function BillFilters() {
 
       <div className="flex items-center gap-2">
         <Input
+          aria-label="Filter bills from date"
           type="date"
           value={from}
           onChange={(e) => handleDateChange("from", e.target.value)}
@@ -79,6 +80,7 @@ export function BillFilters() {
         />
         <span className="text-muted-foreground">to</span>
         <Input
+          aria-label="Filter bills to date"
           type="date"
           value={to}
           onChange={(e) => handleDateChange("to", e.target.value)}
