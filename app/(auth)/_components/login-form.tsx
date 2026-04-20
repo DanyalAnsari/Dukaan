@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,26 +23,18 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 
-const loginSchema = z.object({
-  email: z
-    .email("Invalid email address")
-    .max(255, "Email must not exceed 255 characters"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type LoginInput = z.input<typeof loginSchema>;
-type LoginOutput = z.output<typeof loginSchema>;
+import { loginSchema, LoginSchema } from "../_lib/schema";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
-  const form = useForm<LoginInput, any, LoginOutput>({
+  const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
     mode: "onTouched",
   });
 
-  async function onSubmit(data: LoginOutput) {
+  async function onSubmit(data: LoginSchema) {
     try {
       await signIn.email({
         email: data.email,

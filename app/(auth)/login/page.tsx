@@ -12,12 +12,17 @@ import {
 import LoginForm from "../_components/login-form";
 import { Separator } from "@/components/ui/separator";
 
+export const metadata = {
+  title: "Login | Dukaan",
+  description: "Login to your shop account",
+};
+
 export default function LoginPage() {
   return (
-    <div className="space-y-6 fade-in">
+    <div className="fade-in">
       <Card className="border-none bg-transparent shadow-none">
         <CardHeader className="space-y-1 px-0 text-center">
-          <CardTitle className="text-2xl font-semibold tracking-tight">
+          <CardTitle className="font-heading text-2xl font-semibold tracking-tight">
             Welcome back
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">

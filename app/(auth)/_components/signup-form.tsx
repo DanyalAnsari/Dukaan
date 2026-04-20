@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,27 +23,19 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { useRouter } from "next/navigation";
-
-const registerSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.email("Enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type SignupInput = z.input<typeof registerSchema>;
-type SignupOutput = z.output<typeof registerSchema>;
+import { registerSchema, SignupSchema } from "../_lib/schema";
 
 export default function SignupForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
 
-  const form = useForm<SignupInput, any, SignupOutput>({
+  const form = useForm<SignupSchema>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: "", email: "", password: "" },
     mode: "onTouched",
   });
 
-  async function onSubmit(data: SignupOutput) {
+  async function onSubmit(data: SignupSchema) {
     try {
       await signUp.email({
         name: data.name,

@@ -11,13 +11,18 @@ import {
 import SignupForm from "../_components/signup-form";
 import { Separator } from "@/components/ui/separator";
 
+export const metadata = {
+  title: "Sign Up | Dukaan",
+  description: "Create a new account for Dukaan",
+};
+
 export default function SignupPage() {
   return (
-    <div className="space-y-6 fade-in">
+    <div className="fade-in">
       <Card className="border-none bg-transparent shadow-none">
         {/* Header */}
         <CardHeader className="space-y-1 px-0 text-center">
-          <CardTitle className="text-2xl font-semibold tracking-tight">
+          <CardTitle className="font-heading text-2xl font-semibold tracking-tight">
             Create Account
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
