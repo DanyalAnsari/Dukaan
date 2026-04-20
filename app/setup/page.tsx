@@ -36,14 +36,14 @@ import {
 
 import { setupShopAction } from "./_lib/actions";
 import { STEPS } from "@/constants";
-import { setupFormSchema, type SetupFormValues } from "./_lib/schema";
+import { setupFormSchema, type SetupFormInput, type SetupFormOutput } from "./_lib/schema";
 import { MotionDiv } from "@/components/shared/motion/div";
 import SetupInputField from "./_components/setup-input-fields";
 
 const STEP_ICONS = [Store, ShieldCheck, CreditCard] as const;
 
 type InputConfig = {
-  name: Exclude<keyof SetupFormValues, "address">;
+  name: Exclude<keyof SetupFormInput, "address">;
   label: string;
   placeholder: string;
   className?: string;
@@ -106,7 +106,7 @@ export default function SetupPage() {
   const isLastStep = activeStep === STEPS.length - 1;
   const StepIcon = STEP_ICONS[activeStep];
 
-  const form = useForm<SetupFormValues>({
+  const form = useForm<SetupFormInput, any, SetupFormOutput>({
     resolver: zodResolver(setupFormSchema),
     defaultValues: {
       name: "",

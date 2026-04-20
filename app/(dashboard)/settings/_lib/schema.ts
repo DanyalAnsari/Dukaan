@@ -16,4 +16,6 @@ export const shopSettingsSchema = z.object({
   invoicePrefix: z.string().min(1, "Invoice prefix is required"),
 });
 
+export type ShopSettingsInput = z.input<typeof shopSettingsSchema>;
+export type ShopSettingsOutput = z.output<typeof shopSettingsSchema>;
 export type ShopSettingsSchema = z.infer<typeof shopSettingsSchema>;

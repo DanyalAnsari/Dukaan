@@ -17,31 +17,39 @@ const paymentSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
-type PaymentInput = z.infer<typeof paymentSchema>;
+export type PaymentInput = z.input<typeof paymentSchema>;
+export type PaymentOutput = z.output<typeof paymentSchema>;
+export type PaymentSchema = z.infer<typeof paymentSchema>;
 
 export async function recordPaymentAction(data: PaymentInput) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const shop = await getShopByUserId(session.user.id);
+  if (!shop) redirect("/setup");
+
+  const result = paymentSchema.safeParse(data);
+  if (!result.success) {
+    return {
+      success: false,
+      message: "Invalid payment data",
+      errors: result.error.issues?.map((issue) => ({
+        field: issue.path[0],
+        message: issue.message,
+      })),
+    };
+  }
+
+  const { customerId, amountPaise, paymentMethod, billId, notes } = result.data;
+
+  if (!customerId || !billId) {
+    return { success: false, error: "Missing customer or bill reference" };
+  }
+
+  const shopId = shop.id;
+  const amountInPaise = Math.round(amountPaise);
+
   try {
-    const session = await getSession();
-    if (!session) redirect("/login");
-
-    const shop = await getShopByUserId(session.user.id);
-    if (!shop) redirect("/setup");
-
-    const parsed = paymentSchema.safeParse(data);
-    if (!parsed.success) {
-      return { success: false, error: "Invalid payment data" };
-    }
-
-    const { customerId, amountPaise, paymentMethod, billId, notes } =
-      parsed.data;
-
-    if (!customerId || !billId) {
-      return { success: false, error: "Missing customer or bill reference" };
-    }
-
-    const shopId = shop.id;
-    const amountInPaise = Math.round(amountPaise);
-
     await db.transaction(async (tx) => {
       await tx.insert(payments).values({
         shopId,
@@ -49,19 +57,16 @@ export async function recordPaymentAction(data: PaymentInput) {
         billId,
         amountPaise,
         paymentMethod,
-        referenceNumber: null,
-        notes: notes || null,
+        notes: notes ?? null,
       });
 
       // Update customer's outstanding balance
-      if (customerId) {
-        await tx
-          .update(customers)
-          .set({
-            outstandingBalancePaise: sql`outstanding_balance_paise - ${amountInPaise}`,
-          })
-          .where(eq(customers.id, customerId));
-      }
+      await tx
+        .update(customers)
+        .set({
+          outstandingBalancePaise: sql`outstanding_balance_paise - ${amountInPaise}`,
+        })
+        .where(eq(customers.id, customerId));
 
       // If payment is for a specific bill, update that bill's status
       if (billId) {
@@ -87,7 +92,8 @@ export async function recordPaymentAction(data: PaymentInput) {
             })
             .where(eq(bills.id, billId));
         }
-      } else if (customerId) {
+      }
+      if (customerId) {
         // General payment - Allocate to oldest unpaid bills first (FIFO)
         const unpaidBills = await tx.query.bills.findMany({
           where: and(

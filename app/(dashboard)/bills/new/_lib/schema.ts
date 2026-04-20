@@ -19,4 +19,6 @@ export const billSchema = z.object({
   status: z.enum(["paid", "partial", "credit", "draft"]).default("paid"),
 });
 
+export type BillInput = z.input<typeof billSchema>;
+export type BillOutput = z.output<typeof billSchema>;
 export type BillSchema = z.infer<typeof billSchema>;

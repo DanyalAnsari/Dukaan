@@ -24,7 +24,11 @@ import {
 import { toast } from "sonner";
 import { Loader2, LogOut } from "lucide-react";
 import { updateShopSettingsAction } from "../_lib/actions";
-import { shopSettingsSchema, type ShopSettingsSchema } from "../_lib/schema";
+import {
+  type ShopSettingsInput,
+  type ShopSettingsOutput,
+  shopSettingsSchema,
+} from "../_lib/schema";
 import { Shop } from "@/types";
 
 interface SettingsFormProps {
@@ -36,7 +40,7 @@ export default function SettingsForm({ shop, user }: SettingsFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<ShopSettingsSchema>({
+  const form = useForm<ShopSettingsInput, any, ShopSettingsOutput>({
     resolver: zodResolver(shopSettingsSchema),
     defaultValues: {
       name: shop.name || "",
@@ -47,7 +51,7 @@ export default function SettingsForm({ shop, user }: SettingsFormProps) {
     },
   });
 
-  const onSubmit = (data: ShopSettingsSchema) => {
+  const onSubmit = (data: ShopSettingsOutput) => {
     startTransition(async () => {
       const result = await updateShopSettingsAction(data);
 
@@ -140,7 +144,10 @@ export default function SettingsForm({ shop, user }: SettingsFormProps) {
             </FieldGroup>
 
             <div className="pt-4">
-              <Button type="submit" disabled={isPending || !form.formState.isDirty}>
+              <Button
+                type="submit"
+                disabled={isPending || !form.formState.isDirty}
+              >
                 {isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

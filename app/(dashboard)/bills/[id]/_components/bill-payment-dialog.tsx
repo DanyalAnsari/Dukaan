@@ -53,7 +53,8 @@ export function BillPaymentDialog({
     paymentMethod: z.string().min(1),
   });
 
-  type FormValues = z.infer<typeof formSchema>;
+  type FormInput = z.input<typeof formSchema>;
+  type FormOutput = z.output<typeof formSchema>;
 
   const {
     register,
@@ -61,7 +62,7 @@ export function BillPaymentDialog({
     setValue,
     control,
     formState: { errors },
-  } = useForm<FormValues>({
+  } = useForm<FormInput, any, FormOutput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       amount: maxAmount,
@@ -71,7 +72,7 @@ export function BillPaymentDialog({
 
   const paymentMethod = useWatch({ control, name: "paymentMethod" });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = (values: FormOutput) => {
     startTransition(async () => {
       const result = await recordPaymentAction({
         customerId,

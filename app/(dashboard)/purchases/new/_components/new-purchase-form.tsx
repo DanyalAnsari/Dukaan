@@ -37,7 +37,7 @@ import { Loader2, Check, ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { purchaseSchema, type PurchaseSchema } from "../../_lib/schema";
+import { purchaseSchema, type PurchaseInput, type PurchaseOutput } from "../../_lib/schema";
 import { createPurchaseAction } from "../../actions";
 import { type Product } from "@/types";
 
@@ -50,7 +50,7 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
-  const form = useForm<PurchaseSchema>({
+  const form = useForm<PurchaseInput, any, PurchaseOutput>({
     resolver: zodResolver(purchaseSchema),
     defaultValues: {
       productId: "",
@@ -67,7 +67,7 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
   const selectedProductId = form.watch("productId");
   const selectedProduct = products.find((p) => p.id === selectedProductId);
 
-  const onSubmit = (data: PurchaseSchema) => {
+  const onSubmit = (data: PurchaseOutput) => {
     startTransition(async () => {
       const result = await createPurchaseAction(data);
 

@@ -29,7 +29,7 @@ import {
 import { Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { productSchema, type ProductSchema } from "../_lib/schema";
+import { productSchema, type ProductInput, type ProductOutput } from "../_lib/schema";
 import { type Product } from "@/types";
 
 interface ProductFormProps {
@@ -43,7 +43,7 @@ export function ProductForm({ initialData, onSubmit: submitAction, title, descri
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<ProductSchema>({
+  const form = useForm<ProductInput, any, ProductOutput>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: initialData?.name || "",
@@ -60,7 +60,7 @@ export function ProductForm({ initialData, onSubmit: submitAction, title, descri
     },
   });
 
-  const onSubmit = (data: ProductSchema) => {
+  const onSubmit = (data: ProductOutput) => {
     const payload = {
       ...data,
       unitPricePaise: Math.round(data.unitPricePaise * 100),

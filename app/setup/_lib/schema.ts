@@ -32,4 +32,6 @@ export const setupFormSchema = step1Schema.extend(
   step2Schema.extend(step3Schema.shape).shape
 );
 
+export type SetupFormInput = z.input<typeof setupFormSchema>;
+export type SetupFormOutput = z.output<typeof setupFormSchema>;
 export type SetupFormValues = z.infer<typeof setupFormSchema>;

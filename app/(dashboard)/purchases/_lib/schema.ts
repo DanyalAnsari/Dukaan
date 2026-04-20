@@ -11,4 +11,6 @@ export const purchaseSchema = z.object({
   notes: z.string().optional(),
 });
 
+export type PurchaseInput = z.input<typeof purchaseSchema>;
+export type PurchaseOutput = z.output<typeof purchaseSchema>;
 export type PurchaseSchema = z.infer<typeof purchaseSchema>;

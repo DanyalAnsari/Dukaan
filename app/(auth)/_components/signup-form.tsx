@@ -31,19 +31,20 @@ const registerSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-type SignupInput = z.infer<typeof registerSchema>;
+type SignupInput = z.input<typeof registerSchema>;
+type SignupOutput = z.output<typeof registerSchema>;
 
 export default function SignupForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
 
-  const form = useForm<SignupInput>({
+  const form = useForm<SignupInput, any, SignupOutput>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: "", email: "", password: "" },
     mode: "onTouched",
   });
 
-  async function onSubmit(data: SignupInput) {
+  async function onSubmit(data: SignupOutput) {
     try {
       await signUp.email({
         name: data.name,

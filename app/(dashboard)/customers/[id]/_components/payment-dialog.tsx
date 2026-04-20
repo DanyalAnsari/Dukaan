@@ -53,7 +53,8 @@ export function PaymentDialog({
     paymentMethod: z.string().min(1),
   });
 
-  type FormValues = z.infer<typeof formSchema>;
+  type FormInput = z.input<typeof formSchema>;
+  type FormOutput = z.output<typeof formSchema>;
 
   const {
     register,
@@ -62,7 +63,7 @@ export function PaymentDialog({
     watch,
     reset,
     formState: { errors },
-  } = useForm<FormValues>({
+  } = useForm<FormInput, any, FormOutput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       amount: undefined,
@@ -72,7 +73,7 @@ export function PaymentDialog({
 
   const paymentMethod = watch("paymentMethod");
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = (values: FormOutput) => {
     startTransition(async () => {
       const result = await recordPaymentAction({
         billId,

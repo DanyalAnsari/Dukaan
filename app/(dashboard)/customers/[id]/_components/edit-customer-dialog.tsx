@@ -20,7 +20,7 @@ import {
 import { Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { updateCustomerAction } from "../../_lib/actions";
-import { customerSchema, type CustomerSchema } from "../../_lib/schema";
+import { customerSchema, type CustomerInput, type CustomerOutput } from "../../_lib/schema";
 
 interface EditCustomerDialogProps {
   open: boolean;
@@ -42,7 +42,7 @@ export function EditCustomerDialog({
 }: EditCustomerDialogProps) {
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<CustomerSchema>({
+  const form = useForm<CustomerInput, any, CustomerOutput>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
       name: customer.name,
@@ -53,7 +53,7 @@ export function EditCustomerDialog({
     },
   });
 
-  const onSubmit = (data: CustomerSchema) => {
+  const onSubmit = (data: CustomerOutput) => {
     startTransition(async () => {
       const result = await updateCustomerAction(customer.id, data);
 

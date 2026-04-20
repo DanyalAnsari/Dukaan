@@ -14,4 +14,6 @@ export const productSchema = z.object({
   reorderLevel: z.coerce.number().min(0).default(10),
 });
 
+export type ProductInput = z.input<typeof productSchema>;
+export type ProductOutput = z.output<typeof productSchema>;
 export type ProductSchema = z.infer<typeof productSchema>;
