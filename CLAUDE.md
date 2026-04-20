@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code when working with this repository.
+Read FEATURES.md for detailed per-feature and per-page specifications.
 
 ## Project Overview
 
@@ -13,11 +14,17 @@ target user is a 40-year-old shopkeeper who is not tech-savvy.
 - **Framework**: Next.js 16 (App Router, Turbopack)
 - **Language**: TypeScript (strict mode)
 - **Database**: PostgreSQL via Drizzle ORM (`drizzle-orm@^0.45.x`)
-- **Auth**: Better Auth (`better-auth@^1.5.x`)
+- **Auth**: Better Auth (`better-auth@^1.5.x`) — email/password only, NO org plugin
 - **State**: Zustand (client-side cart and shop state only)
 - **UI**: shadcn/ui (New York style) + Tailwind CSS v4
+- **Tables**: TanStack Table (`@tanstack/react-table`) — all data tables
+- **Forms**: react-hook-form + zod (client validation), API routes (mutations)
 - **PDF**: pdfmake (invoice generation in Route Handlers)
 - **Package manager**: pnpm
+
+## Guidelines
+
+- Always use shadcn skills from `./.agents/skills/shadcn/SKILL.md`
 
 ## Commands
 
@@ -30,68 +37,107 @@ pnpm format       # Prettier
 pnpm typecheck    # TypeScript check
 
 # Database
-pnpm drizzle-kit generate   # Generate migration from schema changes
-pnpm drizzle-kit migrate    # Apply migrations to DB
-pnpm drizzle-kit studio     # Open Drizzle Studio (DB browser)
+pnpm db:generate    # Generate migration from schema changes (drizzle-kit generate)
+pnpm db:migrate     # Apply migrations to DB (drizzle-kit migrate)
+pnpm db:push        # Push schema directly to DB (drizzle-kit push)
+pnpm db:seed        # Seed database (tsx database/seed/index.ts)
 
-# Auth
-npx auth generate --adapter drizzle   # Generate Better Auth schema
-npx auth migrate                      # Run auth migrations
+# Auth schema generation (run after configuring auth.ts)
+npx auth generate --adapter drizzle
+npx auth migrate
 ```
-
-````
 
 ## Project Structure
 
 ```
-src/
-  app/
-    (auth)/
-      login/page.tsx
-    (dashboard)/
-      layout.tsx              ← auth check + sidebar shell
-      dashboard/page.tsx
-      bills/
-        page.tsx              ← bill history list
-        new/page.tsx          ← NEW BILL (most important screen)
-        [id]/page.tsx         ← invoice view + share/print
-      products/
-        page.tsx
-        new/page.tsx
-        [id]/edit/page.tsx
-      customers/
-        page.tsx
-        new/page.tsx
-        [id]/page.tsx         ← customer ledger (udhar)
-      settings/page.tsx
-    api/
-      auth/[...all]/route.ts
-      bills/route.ts                  ← POST: atomic bill creation
-      bills/[id]/pdf/route.ts         ← GET: pdfmake invoice PDF
-      payments/route.ts
-      products/route.ts
-      products/[id]/route.ts
-      customers/route.ts
-      dashboard/summary/route.ts
+app/
+  (auth)/
+    _components/
+      login-form.tsx          ← client form, uses authClient.signIn.email()
+      signup-form.tsx          ← client form, uses authClient.signUp.email()
+    layout.tsx                 ← split layout: brand panel + form
+    login/page.tsx
+    signup/page.tsx
+  (dashboard)/
+    _components/
+      dashboard-sidebar.tsx    ← shadcn SidebarProvider
+    layout.tsx                 ← auth check + shop check + sidebar shell
+    dashboard/
+      _components/
+      page.tsx
+    bills/
+      page.tsx
+      new/page.tsx             ← NEW BILL (most important screen)
+      [id]/page.tsx
+    products/
+      _components/
+        column.tsx             ← TanStack column definitions
+        data-table.tsx         ← generic TanStack Table component
+      page.tsx
+      new/page.tsx
+    customers/
+      page.tsx
+      [id]/page.tsx
+    settings/
+      page.tsx
+  setup/
+    _components/
+    _lib/
     layout.tsx
-    globals.css
-    proxy.ts                  ← Next.js 16 (replaces middleware.ts)
-  db/
-    index.ts                  ← Drizzle client
-    schema.ts                 ← All table definitions
-  lib/
-    auth.ts                   ← Better Auth server config
-    auth-client.ts            ← Better Auth browser client
-    utils.ts                  ← formatCurrency, amountInWords, cn()
-  stores/
-    useCartStore.ts           ← Bill creation cart state
-    useShopStore.ts           ← Current shop details
-  components/
-    ui/                       ← shadcn/ui components (do not edit)
-    layout/                   ← Sidebar, TopBar, AppShell
-    bills/                    ← BillTable, InvoiceView, CartPanel
-    products/                 ← ProductTable, ProductForm
-    customers/                ← CustomerTable, LedgerView
+    page.tsx
+  api/
+    auth/[...all]/route.ts     ← Better Auth handler
+    auth/me/...                ← session endpoint
+    bills/route.ts             ← GET (list) + POST (create bill)
+    bills/[id]/route.ts        ← GET (single bill)
+    bills/[id]/pdf/...         ← pdfmake PDF Route Handler
+    customers/route.ts         ← GET (list) + POST (create)
+    products/route.ts          ← GET (list) + POST (create)
+    products/[id]/route.ts     ← GET/PUT/DELETE
+    dashboard/summary/route.ts ← dashboard stats
+    setup/route.ts             ← POST (one-time shop creation)
+    shops/me/...               ← current shop
+  layout.tsx
+  globals.css
+  page.tsx                     ← landing page
+database/
+  index.ts                     ← drizzle client + schema export
+  schemas/
+    auth.ts                    ← user, session, account, verification
+    business.ts                ← shops, products, customers, bills, billItems, payments, purchases
+    relations.ts               ← drizzle relations
+    index.ts                   ← re-exports all
+  data/
+    shop.ts                    ← getShopByUserId()
+    bills.ts                   ← getTodaysBills()
+    products.ts                ← getLowStockProducts()
+  migrations/
+  seed/
+lib/
+  auth.ts                      ← Better Auth server config
+  auth-client.ts               ← Better Auth browser client (better-auth/react)
+  get-session.ts               ← getSession() helper (cached, "use server")
+  utils.ts                     ← formatCurrency, amountInWords, formatDate, cn()
+stores/
+  useCartStore.ts              ← bill creation cart state
+  useShopStore.ts              ← current shop context
+components/
+  ui/                          ← shadcn/ui (do not edit manually)
+  shared/
+    stats-card.tsx             ← reusable stat card
+    table/                     ← shared table components
+    theme-toggle.tsx           ← dark/light mode toggle
+  session-provider.tsx         ← session context provider
+  theme-provider.tsx           ← next-themes provider
+constants/
+  index.ts                     ← LOGO, GST_RATES
+types/
+  index.ts                     ← Product, Shop interfaces
+  pdfmake.d.ts                 ← pdfmake type declarations
+hooks/
+  use-mobile.ts                ← mobile breakpoint hook
+proxy.ts                       ← Next.js 16 route protection (root level)
+drizzle.config.ts              ← drizzle-kit config
 ```
 
 ## Next.js 16 Critical Rules
@@ -114,63 +160,255 @@ export default async function Page({ params }: { params: { id: string } }) {
 }
 ```
 
-- Route Handlers are **uncached by default** — no need for `cache: 'no-store'`
-- Use `proxy.ts` not `middleware.ts` (Next.js 16 renamed it)
-- Use `next.config.ts` (TypeScript), not `next.config.js`
-- Turbopack is default — do not add webpack config unless strictly necessary
-- Server Components fetch data directly; `'use client'` only for interactivity
+- Route Handlers are **uncached by default**
+- Use `proxy.ts` not `middleware.ts`
+- Turbopack is default — no webpack config
+- Server Components fetch data; `'use client'` only for interactivity
 
-## Database Schema
+## Auth Setup (Better Auth)
 
-All tables defined in `src/db/schema.ts`. Key rules:
-
-- **All monetary values stored in paise (integer)** — never store rupees
-- IDs are UUIDs (`uuid().primaryKey().defaultRandom()`)
-- Timestamps use `timestamp().defaultNow().notNull()`
-- Never hard-delete products — use `isActive: boolean` soft delete
-- `billItems` snapshots `productName` and `unitPrice` at time of sale
-  so old invoices remain correct if product is later edited/deleted
-
-Tables: `shops`, `products`, `customers`, `bills`, `billItems`,
-`payments`, `purchases`
-
-Relations use stable Drizzle API (`relations` from `drizzle-orm`).
-**Do NOT use the v1 beta `defineRelations` API** — it is unstable.
-
-## Auth (Better Auth)
-
-Server config in `src/lib/auth.ts`:
+**Decision: No Organization plugin in MVP.**
+One user = one shop. The `shops` table links to the user via `ownerId`.
+The org plugin adds 4 unused tables. V3 migration: shops → organizations.
 
 ```ts
+// lib/auth.ts
 import { betterAuth } from "better-auth/minimal"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { db, schema } from "@/database"
+import { nextCookies } from "better-auth/next-js"
+
+export const auth = betterAuth({
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema,
+  }),
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: 8,
+    autoSignIn: true,
+  },
+  advanced: {
+    database: { generateId: "uuid" },
+  },
+  plugins: [nextCookies()],
+})
 ```
 
-Route handler at `app/api/auth/[...all]/route.ts`:
+```ts
+// lib/auth-client.ts
+import { createAuthClient } from "better-auth/react"
+
+export const authClient = createAuthClient({
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+})
+
+export const { useSession, signIn, signOut, signUp } = authClient
+```
+
+**Auth route handler:**
 
 ```ts
+// app/api/auth/[...all]/route.ts
 import { auth } from "@/lib/auth"
 import { toNextJsHandler } from "better-auth/next-js"
 export const { GET, POST } = toNextJsHandler(auth)
 ```
 
-Session cookie name: `better-auth.session_token`
+**Session helper (use this in server components and API routes):**
+
+```ts
+// lib/get-session.ts
+"use server";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { cache } from "react";
+
+export const getSession = cache(
+  async () =>
+    await auth.api.getSession({
+      headers: await headers(),
+    })
+);
+```
+
+**Shop resolution — `getShopByUserId` (Recommended):**
+
+The recommended architecture is to fetch the shop based on the authenticated user ID.
+Both `getSession()` and `getShopByUserId()` are wrapped in React `cache()`,
+making this pattern efficient and consistent across Server Components and Actions.
+
+```ts
+const session = await getSession();
+if (!session) redirect("/login");
+
+const shop = await getShopByUserId(session.user.id);
+if (!shop) redirect("/setup");
+
+const shopId = shop.id;
+```
+
+This avoids the complexity of custom Session data in Better Auth while
+maintaining high performance via server-side caching.
+
+## Mutation Strategy — Server Actions (ALL mutations)
+
+Server Actions for **every mutation** (create, update, delete, toggle).
+API Routes ONLY for:
+- `api/auth/[...all]` — Better Auth handler (required)
+- `api/bills/[id]/pdf` — PDF binary stream response
+
+### Form-based action (create / update)
+
+```ts
+// products/new/actions.ts
+"use server"
+import { getSession } from "@/lib/get-session"
+import { getShopByUserId } from "@/database/data/shop"
+import { db } from "@/database"
+import { products } from "@/database/schemas"
+import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string().min(1), /* ... */ })
+type ActionState = { error?: Record<string, string[]> } | null
+
+export async function createProduct(
+  prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const session = await getSession()
+  if (!session) redirect("/login")
+  const shop = await getShopByUserId(session.user.id)
+  if (!shop) redirect("/setup")
+
+  const parsed = schema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors }
+  }
+  await db.insert(products).values({ ...parsed.data, shopId: shop.id })
+
+  revalidatePath("/products")
+  redirect("/products")
+}
+```
+
+### Non-form action (delete, toggle)
+
+```ts
+// products/actions.ts
+"use server"
+export async function deleteProduct(productId: string) {
+  const session = await getSession()
+  if (!session) throw new Error("Unauthorized")
+  const shop = await getShopByUserId(session.user.id)
+
+  await db.update(products)
+    .set({ isActive: false })
+    .where(and(eq(products.id, productId), eq(products.shopId, shop.id)))
+
+  revalidatePath("/products")
+}
+```
+
+Usage from client:
+```tsx
+"use client"
+import { deleteProduct } from "./actions"
+
+function DeleteButton({ productId }: { productId: string }) {
+  return (
+    <Button onClick={async () => {
+      if (confirm("Delete?")) await deleteProduct(productId)
+    }}>
+      Delete
+    </Button>
+  )
+}
+```
+
+### Complex JSON action (bill creation)
+
+Bill creation is called from client `onClick` (not form submit) because
+cart data is complex JSON. This is still a Server Action — no API route needed.
+
+```ts
+// bills/new/actions.ts
+"use server"
+import type { CartItem } from "@/stores/useCartStore"
+
+export async function createBill(data: {
+  items: CartItem[]
+  customerId: string | null
+  paymentMethod: string
+}) {
+  // auth check, transaction, revalidate, redirect
+}
+```
+
+## Tables — Two Patterns
+
+### TanStack Table (data-heavy, interactive)
+
+Use for pages with sorting, filtering, search, and pagination.
+`'use client'` components receiving data as server-fetched props.
+
+Reference implementation: `app/(dashboard)/products/_components/data-table.tsx`
+
+**Use for:** Products list, Bills list, Customers list, Customer ledger bill history.
+
+Column definitions always define explicit `cell` renderers for:
+
+- Currency columns: wrap in `<span className="font-mono">`
+- Status columns: use status Badge components
+- Date columns: use `formatDate(value)` from `lib/utils.ts`
+- Action columns: use icon buttons, not text links
+
+### Normal shadcn Table (overview / read-only)
+
+Use for simple data display, no client-side interaction.
+Can live inside server components directly.
+
+**Use for:** Dashboard today's bills, Unpaid customers card, Invoice line items,
+Cart items on `/bills/new`.
+
+## Database Schema
+
+All tables in `database/schemas/`. Key rules:
+
+- **All monetary values stored in paise (integer)** — never rupees
+- Column naming: `unitPricePaise`, `mrpPaise`, `outstandingBalancePaise`, `amountPaise`, etc.
+- IDs: `uuid().primaryKey().defaultRandom()`
+- Timestamps: `timestamp().defaultNow().notNull()`
+- Soft delete products/customers: `isActive: boolean` — never hard delete
+- `billItems` snapshots `productName`, `productSku`, `unitPricePaise`, `gstRate` at time of sale
+- Relations: stable `relations` API from `drizzle-orm` — NOT v1 beta `defineRelations`
+- Low stock threshold: `reorderLevel` column (NOT `lowStockThreshold`)
+- Products: NO `category` column (planned for v2)
+- Bills: `status` values are `"paid"`, `"credit"`, `"partial"` (NOT `"unpaid"`)
+- Payments: `paymentMethod` column (NOT `paymentMode`)
+
+Tables (app): `shops`, `products`, `customers`, `bills`, `billItems`,
+`payments`, `purchases`
+
+Tables (Better Auth, generated): `user`, `session`, `account`,
+`verification`
 
 ## Business Logic Rules
 
 ### Currency
 
-- **Always store in paise** (multiply rupees × 100 before storing)
-- **Always display in rupees** using `formatCurrency(paise)` from `lib/utils.ts`
-- Use `Math.round()` for all paise calculations — never `Math.floor()`
-- Display format: `toLocaleString('en-IN', { style: 'currency', currency: 'INR' })`
+- **Store in paise** (rupees × 100)
+- **Display in rupees** using `formatCurrency(paise)` from `lib/utils.ts`
+- Always `Math.round()` — never `Math.floor()`
+- `en-IN` locale for all displays
 
 ```ts
-// lib/utils.ts
 export function formatCurrency(paise: number): string {
-  return (paise / 100).toLocaleString('en-IN', {
-    style: 'currency',
-    currency: 'INR',
+  return (paise / 100).toLocaleString("en-IN", {
+    style: "currency",
+    currency: "INR",
     minimumFractionDigits: 2,
   })
 }
@@ -179,150 +417,95 @@ export function formatCurrency(paise: number): string {
 ### GST Calculation
 
 ```ts
-// All values in paise
-const subtotal = unitPrice * quantity
-const gstAmount = Math.round((subtotal * gstRate) / 100)
-const lineTotal = subtotal + gstAmount
+const subtotal = unitPricePaise * quantity                    // paise
+const gstAmount = Math.round((subtotal * gstRate) / 100)     // paise
+const lineTotal = subtotal + gstAmount                       // paise
 
-// On invoices: split GST as CGST + SGST (50% each)
-const cgst = totalGst / 2
-const sgst = totalGst / 2
+// Invoice display: split 50/50
+const cgst = Math.round(totalGst / 2)
+const sgst = totalGst - cgst   // handles odd paise correctly
 ```
 
-Valid GST rates: `0 | 5 | 12 | 18 | 28` — no other values allowed.
+Valid GST rates: `0 | 5 | 12 | 18 | 28` only (defined in `constants/index.ts`).
 
 ### Invoice Number Generation
 
-- Format: `INV-0001`, `INV-0042` (4-digit zero-padded)
-- Scoped per shop (each shop starts from INV-0001)
-- Must be generated atomically inside a DB transaction to avoid duplicates
+- Format: `INV-0001` (4-digit, zero-padded, per-shop)
+- Prefix stored in `shops.invoicePrefix` (default `"INV"`)
+- Next number tracked in `shops.nextInvoiceNumber`
+- Must be generated inside the bill creation DB transaction
+- Use `SELECT COUNT(*) ...` for now; v2: use `nextInvoiceNumber` with atomic increment
 
-### Bill Creation (POST /api/bills)
+### Bill Creation Transaction
 
-Must be a single DB transaction:
+Current implementation (v1) — all or nothing:
 
-1. Validate all products exist and have sufficient stock
-2. Insert `bills` record with generated invoice number
-3. Insert all `billItems` (with name/price snapshots)
-4. Decrement `stockQty` for each product
-5. Update `customer.outstandingBalance` if status is `credit` or `partial`
-6. If any step fails → rollback everything
+1. Generate invoice number (count-based)
+2. Calculate totals per line item
+3. Insert `bills` record
+4. Insert `billItems` with name/price/sku snapshots
+5. Deduct stock from `products` table using row-level locks (`FOR UPDATE`) to prevent overselling
+6. Update `customer.outstandingBalancePaise` if status ≠ paid
 
-```ts
-await db.transaction(async (tx) => {
-  // all steps inside here
-})
-```
+**⚠️ Known gaps:**
+- Need UI support for `discountPaise` during bill creation.
 
 ### Customer Balance
 
-- `outstandingBalance` is denormalized on the `customers` table
-- Positive value = customer owes the shop (udhar)
-- Always update atomically with related bill or payment creation
+- Denormalized `outstandingBalancePaise` on `customers` table
+- Positive = customer owes shop (udhar)
+- Always updated inside transaction with related bill/payment
+- Column name: `outstandingBalancePaise` (NOT `outstandingBalance`)
 
 ## Design System
 
-### Colors (CSS variables in `globals.css`)
+### Colors
 
 ```
 Light mode:
-  --background:   #fafaf7   warm off-white (NOT pure white)
-  --foreground:   #1c1917   warm near-black (NOT cold #000)
-  --primary:      #166534   deep forest green (NOT bright SaaS green)
+  --background:   warm off-white
+  --foreground:   warm near-black
+  --primary:      deep forest green (#166534)
   --border:       #e5e5e0
 
 Dark mode:
-  --background:   #0f1410   green-tinted dark (NOT gray)
-  --primary:      oklch(0.520 0.130 151)  lighter green for dark bg
+  --background:   green-tinted dark
+  --primary:      oklch(0.520 0.130 151)
 ```
 
 ### Typography
 
-- **UI font**: DM Sans (400, 500) — loaded via `next/font/google`
-- **Display font**: Instrument Serif — invoices, large amounts, wordmark ONLY
-- **Monospace**: DM Mono — ALL rupee amounts, invoice numbers, phone numbers,
-  SKUs, GST numbers, barcodes
-- `font-mono` class must be on every currency display, never plain text
+- **UI**: DM Sans 400/500 — `next/font/google`
+- **Display**: Instrument Serif — invoices, large amounts, wordmark ONLY
+- **Mono**: DM Mono — ALL rupee amounts, codes, phone numbers, IDs
 
 ### Component Rules
 
-- Border radius: `rounded` (6px) maximum. **No `rounded-full` on buttons.**
-- Shadows: `shadow-sm` only. No colored shadows.
-- **No gradients anywhere** — flat fills only
-- No decorative illustrations or mascots
-- Table row height: 48px desktop, 40px on `/bills/new`
-- Status badges always use semantic bg/text/border color triples (see below)
+- Max radius: `rounded` (6px). No `rounded-full` on buttons.
+- Shadows: `shadow-sm` only
+- No gradients. No illustrations. No mascots.
+- Table rows: 48px default, 40px on `/bills/new`
 
-### Status Badge Pattern
+### Status Badges
 
 ```tsx
-// paid
-<Badge className="bg-green-50 text-green-700 border border-green-200">
-  Paid
-</Badge>
-// partial
-<Badge className="bg-amber-50 text-amber-700 border border-amber-200">
-  Partial
-</Badge>
-// unpaid
-<Badge className="bg-red-50 text-red-700 border border-red-200">
-  Unpaid
-</Badge>
+// Bill status — uses "credit" not "unpaid"
+// paid → green, partial → amber, credit → red
+<Badge className="bg-green-50 text-green-700 border border-green-200">Paid</Badge>
+<Badge className="bg-amber-50 text-amber-700 border border-amber-200">Partial</Badge>
+<Badge className="bg-red-50 text-red-700 border border-red-200">Credit</Badge>
 ```
 
-### shadcn/ui Components to Use
+### Stock Badges
 
+```tsx
+// Based on stockQty vs reorderLevel
+<Badge className="bg-green-50 ...">In Stock</Badge>      // stockQty > reorderLevel
+<Badge className="bg-amber-50 ...">Low Stock</Badge>     // 0 < stockQty <= reorderLevel
+<Badge className="bg-red-50 ...">Out of Stock</Badge>    // stockQty === 0
 ```
-Button, Input, Textarea, Label, Form (react-hook-form)
-Table, TableHeader, TableBody, TableRow, TableHead, TableCell
-Card, CardHeader, CardContent, CardFooter
-Badge, Separator, Skeleton
-Dialog, Sheet, DropdownMenu, Select, Combobox
-Switch, Sonner (toast notifications)
-```
-
-Add components with: `npx shadcn@latest add <component>`
-
-## Zustand Stores
-
-### useCartStore (`src/stores/useCartStore.ts`)
-
-Manages the in-progress bill on `/bills/new`. Key shape:
-
-```ts
-interface CartItem {
-  productId: string
-  productName: string
-  unitPrice: number    // paise
-  quantity: number
-  gstRate: number
-  gstAmount: number    // paise, computed
-  lineTotal: number    // paise, computed
-}
-interface CartStore {
-  items: CartItem[]
-  customerId: string | null
-  customerName: string | null
-  paymentMode: 'cash' | 'upi' | 'card' | 'credit'
-  amountPaid: number   // paise
-  addItem: (product) => void
-  updateQty: (productId, qty) => void
-  removeItem: (productId) => void
-  clearCart: () => void
-  // derived
-  subtotal: () => number
-  totalGst: () => number
-  totalAmount: () => number
-}
-```
-
-### useShopStore (`src/stores/useShopStore.ts`)
-
-Holds current shop config (name, GSTIN, logo). Loaded once on app init.
 
 ## Environment Variables
-
-Required in `.env.local`:
 
 ```
 DATABASE_URL=postgresql://...
@@ -331,73 +514,30 @@ BETTER_AUTH_URL=http://localhost:3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-## Common Patterns
-
-### Server Component data fetch
-
-```tsx
-// app/(dashboard)/products/page.tsx
-import { db } from "@/db"
-import { products } from "@/db/schema"
-
-export default async function ProductsPage() {
-  const data = await db.select().from(products).where(...)
-  return <ProductTable products={data} />
-}
-```
-
-### Client Component with form
-
-```tsx
-'use client'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-```
-
-### Route Handler (API)
-
-```ts
-// app/api/bills/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/db'
-import { auth } from '@/lib/auth'
-
-export async function POST(req: NextRequest) {
-  const session = await auth.api.getSession({ headers: req.headers })
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  // ...
-}
-```
-
-### WhatsApp share
-
-```ts
-// Share invoice PDF via native share sheet (Android) or fallback
-const blob = await fetch(`/api/bills/${id}/pdf`).then(r => r.blob())
-const file = new File([blob], `INV-${number}.pdf`, { type: 'application/pdf' })
-if (navigator.canShare?.({ files: [file] })) {
-  await navigator.share({ files: [file], title: 'Invoice' })
-} else {
-  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`)
-}
-```
-
 ## What NOT to Do
 
-- ❌ Store rupees in DB — always paise
-- ❌ Use `Math.floor()` for money — always `Math.round()`
-- ❌ Use synchronous `params` in pages — always `await params`
-- ❌ Use `middleware.ts` — use `proxy.ts` in Next.js 16
-- ❌ Use Drizzle v1 beta `defineRelations` — use stable `relations`
-- ❌ Use `better-auth` full import with drizzle — use `better-auth/minimal`
-- ❌ Hard delete products — set `isActive = false`
+- ❌ Store rupees in DB — always paise (column names end in `Paise`)
+- ❌ `Math.floor()` for money — always `Math.round()`
+- ❌ Synchronous `params` in pages — always `await params`
+- ❌ `middleware.ts` — use `proxy.ts`
+- ❌ Drizzle v1 beta `defineRelations` — use stable `relations`
+- ❌ `import { betterAuth } from "better-auth"` with drizzle — use `better-auth/minimal`
+- ❌ `import { createAuthClient } from "better-auth/client"` — use `better-auth/react`
+- ❌ Better Auth Organization plugin — not needed in MVP
+- ❌ Access `session.session.shopId` — use `getShopByUserId(session.user.id)` instead (patterns are cached)
+- ❌ Hard delete products or customers — set `isActive = false`
 - ❌ Create bills outside a DB transaction
 - ❌ Display currency without `formatCurrency()` helper
-- ❌ Use `rounded-full` on buttons
-- ❌ Use gradients anywhere in the UI
-- ❌ Use `font-sans` for rupee amounts — always `font-mono`
-
-```
-
-```
+- ❌ `Math.floor()` for GST split — always `Math.round()`
+- ❌ `rounded-full` on buttons
+- ❌ Gradients anywhere
+- ❌ `font-sans` for rupee amounts — always `font-mono`
+- ❌ Generic dashboard with vanity metrics — show actionable shopkeeper data
+- ❌ Use `salePrice` / `purchasePrice` — actual columns: `unitPricePaise` / `mrpPaise`
+- ❌ Use `lowStockThreshold` — actual column: `reorderLevel`
+- ❌ Use `outstandingBalance` — actual column: `outstandingBalancePaise`
+- ❌ Use `paymentMode` — actual column: `paymentMethod`
+- ❌ Use `status: "unpaid"` — actual value: `"credit"`
+- ❌ Reference `src/` paths — project has no `src/` directory
+- ❌ Reference `db/schema.ts` — actual path: `database/schemas/`
+- ❌ Reference `lib/session.ts` — actual path: `lib/get-session.ts`
