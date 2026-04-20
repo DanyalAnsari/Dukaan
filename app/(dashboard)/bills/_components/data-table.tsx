@@ -1,21 +1,16 @@
 "use client";
 
-import { type Bill } from "@/types";
 import {
   DataTable,
   DataTableSearch,
   DataTableViewOptions,
 } from "@/components/data-table";
 import { getBillColumns } from "./column";
+import { type BillWithCustomer } from "./types";
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
-interface BillWithCustomer extends Bill {
-  customer: {
-    name: string;
-  } | null;
-}
 
 // ---------------------------------------------------------------------------
 // Component

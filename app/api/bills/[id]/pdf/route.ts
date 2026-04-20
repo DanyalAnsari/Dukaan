@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/database";
 import { bills, shops } from "@/database/schemas";
 import { getSession } from "@/lib/get-session";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import path from "path";
 import fs from "fs";
+import { getShopByUserId } from "@/database/data/shop";
 
 const fontPath = path.join(process.cwd(), "public/fonts/Roboto/static");
 
@@ -32,14 +33,19 @@ export async function GET(
 ) {
   try {
     const session = await getSession();
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userShop = await getShopByUserId(session.user.id);
+    if (!userShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
 
     const { id } = await params;
 
     const bill = await db.query.bills.findFirst({
-      where: eq(bills.id, id),
+      where: and(eq(bills.id, id), eq(bills.shopId, userShop.id)),
       with: { items: true, customer: true },
     });
 
@@ -112,18 +118,63 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error generating PDF:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to generate PDF",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    const responseBody: { error: string; details?: string } = {
+      error: "Failed to generate PDF",
+    };
+
+    // Only attach details in development
+    if (process.env.NODE_ENV === "development") {
+      responseBody.details = error instanceof Error ? error.message : "Unknown error";
+    }
+
+    return NextResponse.json(responseBody, { status: 500 });
   }
 }
 
 // ===== IMPROVED PDF LAYOUT =====
-function generatePDF(doc: PDFKit.PDFDocument, bill: any, shop: any) {
+type BillForPDF = {
+  id: string;
+  invoiceNumber: string;
+  billDate: Date | string;
+  subtotalPaise: number;
+  gstTotalPaise: number;
+  discountPaise: number | null;
+  totalPaise: number;
+  status: string | null;
+  amountDuePaise: number | null;
+  amountPaidPaise: number | null;
+  paymentMethod: string | null;
+  notes: string | null;
+  customer: {
+    name: string;
+    phone: string | null;
+    email: string | null;
+    address: string | null;
+  } | null;
+  items: Array<{
+    id: string;
+    productName: string;
+    productSku: string | null;
+    hsnCode: string | null;
+    quantity: number;
+    unit: string | null;
+    unitPricePaise: number;
+    gstRate: number;
+    gstAmountPaise: number;
+    lineTotalPaise: number;
+  }>;
+};
+
+type ShopForPDF = {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  gstin: string | null;
+};
+
+function generatePDF(doc: PDFKit.PDFDocument, bill: BillForPDF, shop: ShopForPDF) {
   const formatCurrency = (paise: number) => `₹${(paise / 100).toFixed(2)}`;
 
   const cgst = Math.floor(bill.gstTotalPaise / 2);
@@ -304,7 +355,7 @@ function generatePDF(doc: PDFKit.PDFDocument, bill: any, shop: any) {
   // Table Rows
   doc.font("Regular").fontSize(9);
 
-  bill.items.forEach((item: any, index: number) => {
+  bill.items.forEach((item, index) => {
     // Check if we need a new page
     if (y + rowHeight > pageHeight - 150) {
       doc.addPage();

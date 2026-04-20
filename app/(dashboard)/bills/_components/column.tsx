@@ -7,7 +7,7 @@ import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTableColumnHeader } from "@/components/data-table";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { type Bill } from "@/types";
+import { type BillWithCustomer } from "./types";
 
 // ---------------------------------------------------------------------------
 // Bill status helper
@@ -15,8 +15,13 @@ import { type Bill } from "@/types";
 
 type BillStatus = "paid" | "credit" | "partial" | "draft";
 
-function getBillStatus(bill: Bill): BillStatus {
-  return (bill.status as BillStatus) ?? "draft";
+const VALID_BILL_STATUSES: BillStatus[] = ["paid", "credit", "partial", "draft"];
+
+function getBillStatus(bill: BillWithCustomer): BillStatus {
+  if (bill.status && VALID_BILL_STATUSES.includes(bill.status as BillStatus)) {
+    return bill.status as BillStatus;
+  }
+  return "draft";
 }
 
 const statusConfig: Record<BillStatus, { label: string; className: string }> = {
@@ -41,12 +46,6 @@ const statusConfig: Record<BillStatus, { label: string; className: string }> = {
 // ---------------------------------------------------------------------------
 // Column factory
 // ---------------------------------------------------------------------------
-
-interface BillWithCustomer extends Bill {
-  customer: {
-    name: string;
-  } | null;
-}
 
 export function getBillColumns(): ColumnDef<BillWithCustomer>[] {
   return [

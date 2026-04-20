@@ -19,6 +19,7 @@ import { getShopById, getShopByUserId } from "@/database/data/shop";
 import { getSession } from "@/lib/get-session";
 import { and } from "drizzle-orm";
 import { Separator } from "@/components/ui/separator";
+import { redirect } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -36,7 +37,14 @@ export default async function BillViewPage({ params }: PageProps) {
   const { id } = await params;
 
   const session = await getSession();
-  const userShop = (await getShopByUserId(session!.user.id))!;
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
+  const userShop = await getShopByUserId(session.user.id);
+  if (!userShop) {
+    notFound();
+  }
 
   const bill = await db.query.bills.findFirst({
     where: and(eq(bills.id, id), eq(bills.shopId, userShop.id)),

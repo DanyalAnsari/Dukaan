@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/combobox";
 import { formatCurrency } from "@/lib/utils";
 import { AlertTriangle, Package } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface Product {
@@ -36,7 +36,7 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
   const [open, setOpen] = useState(false);
 
   // Focus shortcut
-  useState(() => {
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Shortcut "/" to focus product search
       if (
@@ -57,7 +57,7 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  });
+  }, []);
 
   const handleAddProduct = useCallback(
     (product: Product) => {

@@ -2,7 +2,7 @@
 
 import { getCartSubtotal, getCartTotalGst } from "@/stores/cartStore";
 import { formatCurrency } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,11 +30,12 @@ export default function BillSummary() {
     customerId,
   } = useCartStore((state) => state);
   const [discountInput, setDiscountInput] = useState("");
+  const [amountEdited, setAmountEdited] = useState(false);
 
   const { subtotal, totalGst, total, balanceDue, changeDue } = useMemo(() => {
     const sub = getCartSubtotal(items);
     const gst = getCartTotalGst(items);
-    const tot = sub + gst - discountPaise;
+    const tot = Math.max(0, sub + gst - discountPaise);
     const balance = Math.max(0, tot - amountPaid);
     const change = Math.max(0, amountPaid - tot);
     return {
@@ -53,8 +54,23 @@ export default function BillSummary() {
   const handleDiscountChange = (value: string) => {
     setDiscountInput(value);
     const numValue = parseFloat(value) || 0;
-    setDiscount(Math.round(numValue * 100)); // Convert rupees to paise
+    const discountInPaise = Math.round(numValue * 100);
+    const maxDiscount = subtotal + totalGst;
+
+    if (discountInPaise > maxDiscount) {
+      // Show UI error if over-discount attempted
+      setDiscount(maxDiscount);
+    } else {
+      setDiscount(discountInPaise);
+    }
   };
+
+  // Sync amountPaid with total when payment method or total changes (unless manually edited)
+  useEffect(() => {
+    if (paymentMethod !== "credit" && !amountEdited) {
+      setAmountPaid(total);
+    }
+  }, [total, paymentMethod, amountEdited, setAmountPaid]);
 
   return (
     <Card className="sticky top-6">
@@ -75,6 +91,7 @@ export default function BillSummary() {
                   disabled={mode === "credit" && !customerId}
                   onClick={() => {
                     setPaymentMethod(mode);
+                    setAmountEdited(false);
                     if (mode !== "credit") {
                       setAmountPaid(total);
                     } else {
@@ -120,11 +137,12 @@ export default function BillSummary() {
               step="0.01"
               placeholder={formatCurrency(total)}
               value={amountPaid ? amountPaid / 100 : ""}
-              onChange={(e) =>
+              onChange={(e) => {
+                setAmountEdited(true);
                 setAmountPaid(
                   Math.round((parseFloat(e.target.value) || 0) * 100)
-                )
-              }
+                );
+              }}
             />
           </div>
         )}

@@ -73,19 +73,25 @@ export function BillPaymentDialog({
 
   const onSubmit = (values: FormValues) => {
     startTransition(async () => {
-      const result = await recordPaymentAction({
-        customerId,
-        billId,
-        amountPaise: values.amount * 100,
-        paymentMethod: values.paymentMethod,
-        notes: `Payment for Invoice ${invoiceNumber}`,
-      });
+      try {
+        const result = await recordPaymentAction({
+          customerId,
+          billId,
+          amountPaise: Math.round(values.amount * 100),
+          paymentMethod: values.paymentMethod,
+          notes: `Payment for Invoice ${invoiceNumber}`,
+        });
 
-      if (result.success) {
-        toast.success("Payment recorded successfully");
-        onOpenChange(false);
-      } else {
-        toast.error(result.error || "Failed to record payment");
+        if (result.success) {
+          toast.success("Payment recorded successfully");
+          onOpenChange(false);
+        } else {
+          toast.error(result.error || "Failed to record payment");
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to record payment"
+        );
       }
     });
   };

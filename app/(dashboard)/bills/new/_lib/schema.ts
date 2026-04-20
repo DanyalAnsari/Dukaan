@@ -8,14 +8,14 @@ export const billSchema = z.object({
       productName: z.string(),
       productSku: z.string().nullable(),
       hsnCode: z.string().nullable(),
-      unitPricePaise: z.number(),
-      gstRate: z.number(),
-      quantity: z.number(),
+      unitPricePaise: z.number().int().min(0).max(1_000_000_000),
+      gstRate: z.number().min(0).max(100),
+      quantity: z.number().int().min(1).max(1_000_000),
     })
   ),
   paymentMethod: z.enum(["cash", "upi", "card", "credit"]),
-  discountPaise: z.number().default(0),
-  amountPaidPaise: z.number().default(0),
+  discountPaise: z.number().int().min(0).max(1_000_000_000).default(0),
+  amountPaidPaise: z.number().int().min(0).max(1_000_000_000).default(0),
   status: z.enum(["paid", "partial", "credit", "draft"]).default("paid"),
 });
 

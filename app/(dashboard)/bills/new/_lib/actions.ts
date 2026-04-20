@@ -45,6 +45,40 @@ export async function createBillAction(data: BillSchema) {
       };
     }
 
+    // Post-parse guards: reject items with invalid values
+    for (const item of items) {
+      if (item.quantity <= 0) {
+        return {
+          success: false,
+          message: `Invalid quantity for ${item.productName}`,
+          errors: [{ field: "items", message: `Quantity must be positive for ${item.productName}` }],
+        };
+      }
+      if (item.unitPricePaise < 0) {
+        return {
+          success: false,
+          message: `Invalid price for ${item.productName}`,
+          errors: [{ field: "items", message: `Price cannot be negative for ${item.productName}` }],
+        };
+      }
+    }
+
+    // Compute bill total and validate amountPaid
+    const preliminarySubtotal = items.reduce((sum, item) => sum + (item.unitPricePaise * item.quantity), 0);
+    const preliminaryGst = items.reduce((sum, item) => {
+      const lineSubtotal = item.unitPricePaise * item.quantity;
+      return sum + Math.round((lineSubtotal * item.gstRate) / 100);
+    }, 0);
+    const preliminaryTotal = Math.max(0, preliminarySubtotal + preliminaryGst - discountPaise);
+
+    if (amountPaidPaise > preliminaryTotal) {
+      return {
+        success: false,
+        message: "Amount paid cannot exceed total",
+        errors: [{ field: "amountPaidPaise", message: "Amount paid cannot exceed bill total" }],
+      };
+    }
+
     const isDraft = requestedStatus === "draft";
 
     // We'll perform everything inside a transaction for atomicity
@@ -90,7 +124,11 @@ export async function createBillAction(data: BillSchema) {
           product = lockedProduct;
         } else {
           product = await tx.query.products.findFirst({
-            where: (products, { eq, and }) => and(eq(products.id, item.productId), eq(products.isActive, true))
+            where: (products, { eq, and }) => and(
+              eq(products.id, item.productId),
+              eq(products.shopId, shop.id),
+              eq(products.isActive, true)
+            )
           });
         }
 
@@ -104,8 +142,11 @@ export async function createBillAction(data: BillSchema) {
           );
         }
 
-        const lineSubtotal = item.unitPricePaise * item.quantity;
-        const lineGst = Math.round((lineSubtotal * item.gstRate) / 100);
+        // Derive pricing from locked product record
+        const unitPrice = product.unitPricePaise;
+        const gstRate = product.gstRate || 0;
+        const lineSubtotal = unitPrice * item.quantity;
+        const lineGst = Math.round((lineSubtotal * gstRate) / 100);
         const lineTotal = lineSubtotal + lineGst;
 
         subtotalPaise += lineSubtotal;
@@ -114,12 +155,12 @@ export async function createBillAction(data: BillSchema) {
         itemsToInsert.push({
           billId: "", // Will update after bill insert
           productId: item.productId,
-          productName: item.productName,
-          productSku: item.productSku,
-          hsnCode: item.hsnCode,
+          productName: product.name,
+          productSku: product.sku,
+          hsnCode: product.hsnCode,
           quantity: item.quantity,
-          unitPricePaise: item.unitPricePaise,
-          gstRate: item.gstRate,
+          unitPricePaise: unitPrice,
+          gstRate: gstRate,
           gstAmountPaise: lineGst,
           lineTotalPaise: lineTotal,
           unit: product.unit || "pcs",
@@ -181,10 +222,22 @@ export async function createBillAction(data: BillSchema) {
 
       // 6. Update customer balance if there is an amount due
       if (customerId && amountDuePaise > 0) {
+        // Verify customer belongs to current shop
+        const customer = await tx.query.customers.findFirst({
+          where: (customers, { eq, and }) => and(
+            eq(customers.id, customerId),
+            eq(customers.shopId, shop.id)
+          )
+        });
+
+        if (!customer) {
+          throw new Error("Customer not found or does not belong to your shop");
+        }
+
         await tx
           .update(customers)
           .set({
-            outstandingBalancePaise: sql`outstanding_balance_paise + ${amountDuePaise}`,
+            outstandingBalancePaise: sql`COALESCE(outstanding_balance_paise, 0) + ${amountDuePaise}`,
           })
           .where(eq(customers.id, customerId));
       }
