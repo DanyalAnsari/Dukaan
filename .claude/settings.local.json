@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm typecheck:*)",
+      "Bash(node -e \"import\\('better-auth/react'\\).then\\(m => console.log\\(Object.keys\\(m\\).join\\('\\\\n'\\)\\)\\)\")",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm drizzle-kit:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npx shadcn@latest:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(npx tsc:*)",
+      "Bash(where node:*)",
+      "Bash(C:\\\\Program Files\\\\nodejs\\\\node.exe:*)",
+      "WebSearch",
+      "WebFetch(domain:www.better-auth.com)",
+      "Bash(\"C:\\\\Program Files\\\\nodejs\\\\node.exe\" \"C:\\\\Users\\\\Danyal Ansari\\\\Projects\\\\dukaan\\\\node_modules\\\\.bin\\\\auth\" generate --adapter drizzle)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "Bash(curl -s http://localhost:3000/dashboard)",
+      "Bash(curl -s http://localhost:3000/api/products)",
+      "Bash(curl -s http://localhost:3000/bills/test-123)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "mcp__plugin_ecc_context7__resolve-library-id",
+      "mcp__plugin_ecc_context7__query-docs",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}
