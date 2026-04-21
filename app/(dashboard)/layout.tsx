@@ -25,7 +25,7 @@ export default async function DashboardLayout({
       <DashboardSidebar userEmail={session.user.email} shop={shop} />
 
       {/* Main content */}
-      <div className="flex-1 bg-secondary/20 pb-20 lg:pb-0">
+      <div className="w-full flex-1 bg-secondary/20 pb-20 lg:pb-0">
         <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b">
           <div className="flex w-full items-center justify-between px-4">
             <div className="flex items-center justify-between gap-2">

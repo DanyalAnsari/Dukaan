@@ -18,7 +18,11 @@ import StatsCard from "@/components/shared/stats-card";
 import StatusBadge from "@/components/shared/status-badge";
 
 import { getShopByUserId } from "@/database/data/shop";
-import { getTodaysBills, getSalesPerformance } from "@/database/data/bills";
+import {
+  getTodaysBills,
+  getPaymentBreakdown,
+  getSalesByDay,
+} from "@/database/data/bills";
 import { getLowStockProducts } from "@/database/data/products";
 import { getOutstandingCustomers } from "@/database/data/customers";
 
@@ -26,73 +30,58 @@ import { SalesChart } from "./_components/sales-chart";
 import { PaymentBreakdown } from "./_components/payment-breakdown";
 import { CardWrapper } from "./_components/card-wrapper";
 
+export const metadata = {
+  title: "Dashboard",
+  description: "Your shop overview",
+};
+
 export default async function DashboardPage() {
   const session = await getSession();
   const shop = (await getShopByUserId(session!.user.id))!;
 
-  const [todayBills, lowStockProducts, pendingCustomers, performanceData] =
-    await Promise.all([
-      getTodaysBills(shop.id),
-      getLowStockProducts(shop.id),
-      getOutstandingCustomers(shop.id),
-      getSalesPerformance(shop.id, 7),
-    ]);
-
-  // Chart data: Sales by day
-  const salesByDay = performanceData.reduce(
-    (acc, bill) => {
-      const day = format(bill.billDate, "MMM dd");
-      if (!acc[day]) acc[day] = 0;
-      acc[day] += bill.totalPaise;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
-  const chartData = Object.entries(salesByDay).map(([date, total]) => ({
-    date,
-    total,
-  }));
-
-  // Chart data: Payment breakdown
-  const paymentMethods = performanceData.reduce(
-    (acc, bill) => {
-      const method = bill.paymentMethod || "cash";
-      if (!acc[method]) acc[method] = 0;
-      acc[method] += bill.totalPaise;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
-  const paymentData = Object.entries(paymentMethods).map(([name, value]) => ({
-    name,
-    value,
-  }));
+  const [
+    todayBills,
+    lowStockProducts,
+    pendingCustomers,
+    salesByDay,
+    paymentBreakdown,
+  ] = await Promise.all([
+    getTodaysBills(shop.id),
+    getLowStockProducts(shop.id),
+    getOutstandingCustomers(shop.id),
+    getSalesByDay(shop.id, 7),
+    getPaymentBreakdown(shop.id, 7),
+  ]);
 
   // Calculate stats
-  const todayCollection = todayBills
-    .filter((b) => b.status === "paid")
-    .reduce((sum, b) => sum + b.totalPaise, 0);
+  const todayCollection = todayBills.reduce(
+    (sum, b) => (b.status === "paid" ? sum + b.totalPaise : 0),
+    0
+  );
 
   const billsTodayCount = todayBills.length;
 
   const totalPendingUdhar = pendingCustomers.reduce(
-    (sum, c) =>
-      c.outstandingBalancePaise ? sum + c.outstandingBalancePaise : sum,
+    (sum, c) => sum + (c.outstandingBalancePaise ?? 0),
     0
   );
+
+  const chartData = salesByDay.map(({ day, totalPaise }) => ({
+    date: format(new Date(day), "MMM dd"),
+    total: totalPaise,
+  }));
 
   const lowStockCount = lowStockProducts.length;
 
   // Greeting based on time of day
-  const hour = new Date().getHours();
+  const date = new Date();
+  const hour = date.getHours();
   const greeting =
     hour < 12 ? "Good Morning" : hour < 18 ? "Good Afternoon" : "Good Evening";
 
   // Day name in Indian format
-  const dayName = new Date().toLocaleDateString("en-IN", { weekday: "long" });
-  const dateStr = new Date().toLocaleDateString("en-IN", {
+  const dayName = date.toLocaleDateString("en-IN", { weekday: "long" });
+  const dateStr = date.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -170,7 +159,7 @@ export default async function DashboardPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <SalesChart data={chartData} />
-        <PaymentBreakdown data={paymentData} />
+        <PaymentBreakdown data={paymentBreakdown} />
       </div>
 
       {/* Two Column Layout */}
