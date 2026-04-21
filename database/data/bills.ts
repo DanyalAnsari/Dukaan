@@ -1,5 +1,9 @@
 import { db } from "@/database";
 import { startOfToday } from "@/lib/utils";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { cache } from "react";
+import { bills } from "../schemas";
+import { subDays } from "date-fns";
 
 export const getTodaysBills = async (shopId: string) => {
   const today = startOfToday();
@@ -10,36 +14,55 @@ export const getTodaysBills = async (shopId: string) => {
   });
 };
 
-export const getAllBills = async (
-  shopId: string,
-  filters?: { status?: string; startDate?: Date; endDate?: Date }
-) => {
-  return await db.query.bills.findMany({
-    where: (bills, { and, eq, gte, lte }) => {
-      const conditions = [eq(bills.shopId, shopId)];
-      if (filters?.status && filters.status !== "all") {
-        conditions.push(eq(bills.status, filters.status));
-      }
-      if (filters?.startDate) {
-        conditions.push(gte(bills.billDate, filters.startDate));
-      }
-      if (filters?.endDate) {
-        conditions.push(lte(bills.billDate, filters.endDate));
-      }
-      return and(...conditions);
-    },
-    with: { customer: { columns: { name: true } } },
-    orderBy: (bills, { desc }) => [desc(bills.billDate)],
-  });
+export const getAllBills = cache(
+  async (
+    shopId: string,
+    filters?: { status?: string; startDate?: Date; endDate?: Date }
+  ) =>
+    await db.query.bills.findMany({
+      where: (bills, { and, eq, gte, lte }) => {
+        const conditions = [eq(bills.shopId, shopId)];
+        if (filters?.status && filters.status !== "all") {
+          conditions.push(eq(bills.status, filters.status));
+        }
+        if (filters?.startDate) {
+          conditions.push(gte(bills.billDate, filters.startDate));
+        }
+        if (filters?.endDate) {
+          conditions.push(lte(bills.billDate, filters.endDate));
+        }
+        return and(...conditions);
+      },
+      with: { customer: { columns: { name: true } } },
+      orderBy: (bills, { desc }) => [desc(bills.billDate)],
+    })
+);
+
+// For SalesChart — groups by day only
+export const getSalesByDay = async (shopId: string, days: number = 7) => {
+  const startDate = subDays(new Date(), days);
+
+  return db
+    .select({
+      day: sql<string>`DATE(bill_date)`,
+      totalPaise: sql<number>`SUM(total_paise)`.mapWith(Number),
+    })
+    .from(bills)
+    .where(and(eq(bills.shopId, shopId), gte(bills.billDate, startDate)))
+    .groupBy(sql`DATE(bill_date)`) // ← only day
+    .orderBy(sql`DATE(bill_date)`);
 };
 
-export const getSalesPerformance = async (shopId: string, days: number = 7) => {
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  
-  return await db.query.bills.findMany({
-    where: (bills, { and, eq, gte }) =>
-      and(eq(bills.shopId, shopId), gte(bills.billDate, startDate)),
-    orderBy: (bills, { asc }) => [asc(bills.billDate)],
-  });
+// For PaymentBreakdown — groups by method only
+export const getPaymentBreakdown = async (shopId: string, days: number = 7) => {
+  const startDate = subDays(new Date(), days);
+
+  return db
+    .select({
+      paymentMethod: sql<string>`COALESCE(payment_method, 'cash')`,
+      totalPaise: sql<number>`SUM(total_paise)`.mapWith(Number),
+    })
+    .from(bills)
+    .where(and(eq(bills.shopId, shopId), gte(bills.billDate, startDate)))
+    .groupBy(sql`COALESCE(payment_method, 'cash')`);
 };
