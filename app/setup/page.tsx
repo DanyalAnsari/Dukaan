@@ -36,7 +36,11 @@ import {
 
 import { setupShopAction } from "./_lib/actions";
 import { STEPS } from "@/constants";
-import { setupFormSchema, type SetupFormInput, type SetupFormOutput } from "./_lib/schema";
+import {
+  setupFormSchema,
+  type SetupFormInput,
+  type SetupFormOutput,
+} from "./_lib/schema";
 import { MotionDiv } from "@/components/shared/motion/div";
 import SetupInputField from "./_components/setup-input-fields";
 
@@ -106,7 +110,7 @@ export default function SetupPage() {
   const isLastStep = activeStep === STEPS.length - 1;
   const StepIcon = STEP_ICONS[activeStep];
 
-  const form = useForm<SetupFormInput, any, SetupFormOutput>({
+  const form = useForm<SetupFormInput, unknown, SetupFormOutput>({
     resolver: zodResolver(setupFormSchema),
     defaultValues: {
       name: "",
@@ -266,9 +270,7 @@ export default function SetupPage() {
                         : input.description
                     }
                     error={
-                      errors[input.name as keyof SetupFormValues] as
-                        | { message?: string }
-                        | undefined
+                      errors[input.name] as { message?: string } | undefined
                     }
                   />
                 ))}
