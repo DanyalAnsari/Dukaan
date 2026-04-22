@@ -1,30 +1,30 @@
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "./schemas";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is not set");
-}
+if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set");
 
 const createDb = async () => {
   if (process.env.NODE_ENV === "production") {
-    // ✅ Production: Neon serverless HTTP driver
-    const { neon } = await import("@neondatabase/serverless");
-    const { drizzle } = await import("drizzle-orm/neon-http");
+    // ✅ Production: Neon WebSocket driver (supports interactive transactions)
+    const { Pool, neonConfig } = await import("@neondatabase/serverless");
+    const { drizzle } = await import("drizzle-orm/neon-serverless");
 
-    const sql = neon(process.env.DATABASE_URL!);
-    return drizzle(sql, { schema });
+    // Node.js usually needs an explicit WS constructor
+    if (typeof (globalThis).WebSocket === "undefined") {
+      const ws = (await import("ws")).default;
+      neonConfig.webSocketConstructor = ws;
+    }
+
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    return drizzle({ client: pool, schema });
   } else {
-    // ✅ Development: Standard node-postgres driver (works with local installed PG)
+    // ✅ Dev: node-postgres
     const { Pool } = await import("pg");
     const { drizzle } = await import("drizzle-orm/node-postgres");
 
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     return drizzle(pool, { schema });
   }
 };
 
-export const db = (await createDb()) as NodePgDatabase<typeof schema>;
-
+export const db = await createDb();
 export { schema };
