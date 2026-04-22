@@ -42,34 +42,24 @@ export const defaultInitState: CartState = {
   discountPaise: 0,
 };
 
-function calculateItemTotals(item: CartItem) {
-  const subtotal = item.unitPricePaise * item.quantity;
-  const gstAmount = Math.round((subtotal * item.gstRate) / 100);
-  const lineTotal = subtotal + gstAmount;
-  return { subtotal, gstAmount, lineTotal };
-}
-
-export const createCartStore = (initState: CartState = defaultInitState) => {
-  return createStore<CartStore>()((set, get) => ({
+export const createCartStore = (initState: CartState = defaultInitState) =>
+  createStore<CartStore>()((set, get) => ({
     ...initState,
+
     addItem: (item) => {
       const { productId, quantity = 1 } = item;
-      const currentItems = get().items;
-      const existing = currentItems.find((i) => i.productId === productId);
-
-      if (existing) {
-        set({
-          items: currentItems.map((i) =>
-            i.productId === productId
-              ? { ...i, quantity: i.quantity + quantity }
-              : i
-          ),
-        });
-      } else {
-        set({
-          items: [...currentItems, { ...item, quantity }],
-        });
-      }
+      set((state) => {
+        const existing = state.items.find((i) => i.productId === productId);
+        return {
+          items: existing
+            ? state.items.map((i) =>
+                i.productId === productId
+                  ? { ...i, quantity: i.quantity + quantity }
+                  : i
+              )
+            : [...state.items, { ...item, quantity }],
+        };
+      });
     },
 
     updateQty: (productId, quantity) => {
@@ -77,50 +67,38 @@ export const createCartStore = (initState: CartState = defaultInitState) => {
         get().removeItem(productId);
         return;
       }
-      set({
-        items: get().items.map((i) =>
+      set((state) => ({
+        items: state.items.map((i) =>
           i.productId === productId ? { ...i, quantity } : i
         ),
-      });
+      }));
     },
 
-    removeItem: (productId) => {
-      set({ items: get().items.filter((i) => i.productId !== productId) });
-    },
+    removeItem: (productId) =>
+      set((state) => ({
+        items: state.items.filter((i) => i.productId !== productId),
+      })),
 
-    setCustomer: (id, name) => {
+    setCustomer: (id, name) =>
       set((state) => {
-        const updates: Partial<CartStore> = {
-          customerId: id,
-          customerName: name,
-        };
+        const base = { customerId: id, customerName: name };
+        // If removing a customer who was on credit, reset payment method
         if (!id && state.paymentMethod === "credit") {
-          updates.paymentMethod = "cash";
-          updates.amountPaid = getCartTotal(state.items, state.discountPaise);
+          return {
+            ...base,
+            paymentMethod: "cash" as PaymentMethod,
+            amountPaid: getCartTotal(state.items, state.discountPaise),
+          };
         }
-        return updates;
-      });
-    },
+        return base;
+      }),
 
-    setPaymentMethod: (method) => {
-      set({ paymentMethod: method });
-    },
-
-    setAmountPaid: (amount) => {
-      set({ amountPaid: amount });
-    },
-
-    setDiscount: (discount) => {
-      set({ discountPaise: discount });
-    },
-
-    clearCart: () => {
-      set(defaultInitState);
-    },
+    setPaymentMethod: (method) => set({ paymentMethod: method }),
+    setAmountPaid: (amount) => set({ amountPaid: amount }),
+    setDiscount: (discount) => set({ discountPaise: discount }),
+    clearCart: () => set(defaultInitState),
   }));
-};
 
-// Computed getters
 export function getCartSubtotal(items: CartItem[]): number {
   return items.reduce(
     (sum, item) => sum + item.unitPricePaise * item.quantity,
@@ -135,11 +113,13 @@ export function getCartTotalGst(items: CartItem[]): number {
   }, 0);
 }
 
-export function getCartTotal(
-  items: CartItem[],
-  discountPaise: number = 0
-): number {
-  const subtotal = getCartSubtotal(items);
-  const totalGst = getCartTotalGst(items);
-  return subtotal + totalGst - discountPaise;
+export function getCartTotal(items: CartItem[], discountPaise = 0): number {
+  let subtotal = 0;
+  let gst = 0;
+  for (const item of items) {
+    const lineSubtotal = item.unitPricePaise * item.quantity;
+    subtotal += lineSubtotal;
+    gst += Math.round((lineSubtotal * item.gstRate) / 100);
+  }
+  return subtotal + gst - discountPaise;
 }

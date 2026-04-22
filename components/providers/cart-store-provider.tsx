@@ -1,8 +1,7 @@
 "use client";
 
-import { type ReactNode, createContext, useState, useContext } from "react";
+import { type ReactNode, createContext, useContext, useState } from "react";
 import { useStore } from "zustand";
-
 import { type CartStore, createCartStore } from "@/stores/cartStore";
 
 export type CartStoreApi = ReturnType<typeof createCartStore>;
@@ -16,7 +15,7 @@ export interface CartStoreProviderProps {
 }
 
 export const CartStoreProvider = ({ children }: CartStoreProviderProps) => {
-  const [store] = useState(() => createCartStore());
+  const [store] = useState(createCartStore); // no arrow wrapper needed
   return (
     <CartStoreContext.Provider value={store}>
       {children}
@@ -27,8 +26,7 @@ export const CartStoreProvider = ({ children }: CartStoreProviderProps) => {
 export const useCartStore = <T,>(selector: (store: CartStore) => T): T => {
   const cartStoreContext = useContext(CartStoreContext);
   if (!cartStoreContext) {
-    throw new Error(`usecartStore must be used within UIStoreProvider`);
+    throw new Error("useCartStore must be used within a CartStoreProvider");
   }
-
   return useStore(cartStoreContext, selector);
 };
