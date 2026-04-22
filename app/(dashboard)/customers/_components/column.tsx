@@ -58,7 +58,7 @@ export function getCustomerColumns(): ColumnDef<Customer>[] {
           <div className="flex flex-col">
             <span className="font-medium">{customer.name}</span>
             {customer.address && (
-              <span className="text-xs text-muted-foreground line-clamp-1">
+              <span className="line-clamp-1 text-xs text-muted-foreground">
                 {customer.address}
               </span>
             )}
@@ -70,9 +70,7 @@ export function getCustomerColumns(): ColumnDef<Customer>[] {
     // Phone
     {
       accessorKey: "phone",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Phone" />
-      ),
+      header: "Phone",
       cell: ({ row }) => {
         const phone = row.original.phone;
         return (
@@ -86,16 +84,10 @@ export function getCustomerColumns(): ColumnDef<Customer>[] {
     // Email
     {
       accessorKey: "email",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Email" />
-      ),
+      header: "Email",
       cell: ({ row }) => {
         const email = row.original.email;
-        return (
-          <span className="text-muted-foreground">
-            {email || "—"}
-          </span>
-        );
+        return <span className="text-muted-foreground">{email || "—"}</span>;
       },
     },
 
@@ -103,15 +95,17 @@ export function getCustomerColumns(): ColumnDef<Customer>[] {
     {
       accessorKey: "outstandingBalancePaise",
       header: ({ column }) => (
-        <div className="text-right">
-          <DataTableColumnHeader column={column} title="Outstanding" />
-        </div>
+        <DataTableColumnHeader column={column} title="Outstanding" />
       ),
       cell: ({ row }) => {
         const balance = row.original.outstandingBalancePaise ?? 0;
         return (
-          <div className="text-right font-mono">
-            <span className={balance > 0 ? "text-red-600 font-medium" : "text-green-600"}>
+          <div className="font-mono">
+            <span
+              className={
+                balance > 0 ? "font-medium text-red-600" : "text-green-600"
+              }
+            >
               {formatCurrency(balance)}
             </span>
           </div>
@@ -123,14 +117,12 @@ export function getCustomerColumns(): ColumnDef<Customer>[] {
     {
       accessorKey: "creditLimitPaise",
       header: ({ column }) => (
-        <div className="text-right">
-          <DataTableColumnHeader column={column} title="Credit Limit" />
-        </div>
+        <DataTableColumnHeader column={column} title="Credit Limit" />
       ),
       cell: ({ row }) => {
         const limit = row.original.creditLimitPaise;
         return (
-          <div className="text-right font-mono text-muted-foreground">
+          <div className="font-mono text-muted-foreground">
             {limit ? formatCurrency(limit) : "—"}
           </div>
         );
@@ -166,11 +158,7 @@ export function getCustomerColumns(): ColumnDef<Customer>[] {
         return (
           <div className="flex items-center gap-2">
             <Link href={`/customers/${customer.id}`}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Eye className="h-4 w-4" />
                 <span className="sr-only">View</span>
               </Button>

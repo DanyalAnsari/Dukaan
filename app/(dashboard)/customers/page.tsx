@@ -5,6 +5,7 @@ import { CustomersDataTable } from "./_components/data-table";
 import CreateCustomerDialog from "./_components/create-customer-dialog";
 import StatsCard from "@/components/shared/stats-card";
 import { getActiveCustomers } from "@/database/data/customers";
+import { IndianRupee, User, Users } from "lucide-react";
 
 export default async function CustomersPage() {
   const session = await getSession();
@@ -27,21 +28,30 @@ export default async function CustomersPage() {
     {
       title: "Total Customers",
       stat: totalCustomers,
+      icon: Users,
+      description: "Total registered customers.",
+      className: "font-mono",
     },
     {
       title: "Customers With Balance",
       stat: customersWithBalance,
-      className: "text-amber-600",
+      icon: User,
+      description: "Customer with unpaid/partial bills.",
+      iconClass: "text-partial bg-partial",
+      className: "text-partial font-mono",
     },
     {
       title: "Total Udhar",
       stat: formatCurrency(totalUdhar),
-      className: "text-red-600",
+      icon: IndianRupee,
+      description: "Total udhar amount.",
+      iconClass: "text-unpaid bg-unpaid",
+      className: "text-unpaid",
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 fade-in">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -60,6 +70,9 @@ export default async function CustomersPage() {
             key={stat.title}
             title={stat.title}
             stat={stat.stat}
+            icon={stat.icon}
+            description={stat.description}
+            iconClass={stat.iconClass}
             contentClassName={stat.className}
           />
         ))}

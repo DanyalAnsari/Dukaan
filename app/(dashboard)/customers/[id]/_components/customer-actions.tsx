@@ -1,12 +1,12 @@
+// app/(dashboard)/customers/[id]/_components/customer-actions.tsx
 "use client";
 
-import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Send, DollarSign, Pencil } from "lucide-react";
+import { useState } from "react";
+import { Send, IndianRupee, Pencil } from "lucide-react"; // IndianRupee > DollarSign
 import { formatCurrency } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { PaymentDialog } from "./payment-dialog";
 import { EditCustomerDialog } from "./edit-customer-dialog";
-import { useState } from "react";
 
 interface CustomerActionsProps {
   customer: {
@@ -17,8 +17,26 @@ interface CustomerActionsProps {
     address: string | null;
     creditLimitPaise: number;
   };
-  outstandingBalance: number;
+  outstandingBalance: number; // in paise
 }
+
+// ─── Pure helper — no JSX, easy to unit-test ─────────────────────────────────
+
+function BalanceDisplay({ balance }: { balance: number }) {
+  if (balance === 0) {
+    return <span className="text-muted-foreground">₹0 — Settled</span>;
+  }
+  if (balance < 0) {
+    return (
+      <span className="text-green-600">
+        {formatCurrency(Math.abs(balance))} Advance
+      </span>
+    );
+  }
+  return <span className="text-red-600">{formatCurrency(balance)} due</span>;
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function CustomerActions({
   customer,
@@ -26,9 +44,8 @@ export default function CustomerActions({
 }: CustomerActionsProps) {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const isSettled = outstandingBalance === 0;
 
-  const handleSendReminder = () => {
+  function handleSendReminder() {
     if (!customer.phone) return;
     const message = `Namaste ${customer.name} ji, aapka ${formatCurrency(
       outstandingBalance
@@ -36,31 +53,18 @@ export default function CustomerActions({
     window.open(
       `https://wa.me/91${customer.phone}?text=${encodeURIComponent(message)}`
     );
-  };
+  }
 
   return (
     <div className="text-right">
-      <div
-        className={`text-3xl font-bold font-mono ${
-          outstandingBalance > 0 
-            ? "text-red-600" 
-            : outstandingBalance < 0 
-              ? "text-green-600" 
-              : "text-muted-foreground"
-        }`}
-      >
-        {outstandingBalance === 0 ? (
-          <span className="text-muted-foreground">₹0 — Settled</span>
-        ) : outstandingBalance < 0 ? (
-          <span>{formatCurrency(Math.abs(outstandingBalance))} Advance</span>
-        ) : (
-          <span>{formatCurrency(outstandingBalance)} due</span>
-        )}
+      <div className="font-mono text-3xl font-bold">
+        <BalanceDisplay balance={outstandingBalance} />
       </div>
-      <div className="flex gap-2 mt-2 justify-end">
+
+      <div className="mt-2 flex justify-end gap-2">
         {customer.phone && (
           <Button variant="outline" size="sm" onClick={handleSendReminder}>
-            <Send className="h-4 w-4 mr-1" />
+            <Send className="mr-1 h-4 w-4" />
             Send Reminder
           </Button>
         )}
@@ -69,15 +73,16 @@ export default function CustomerActions({
           size="sm"
           onClick={() => setEditDialogOpen(true)}
         >
-          <Pencil className="h-4 w-4 mr-1" />
+          <Pencil className="mr-1 h-4 w-4" />
           Edit
         </Button>
         <Button size="sm" onClick={() => setPaymentDialogOpen(true)}>
-          <DollarSign className="h-4 w-4 mr-1" />
+          <IndianRupee className="mr-1 h-4 w-4" />
           Record Payment
         </Button>
       </div>
 
+      {/* billId omitted — this is a ledger-level advance payment, not bill-specific */}
       <PaymentDialog
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}

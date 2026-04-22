@@ -1,9 +1,13 @@
+// app/(dashboard)/customers/_components/create-customer-dialog.tsx
 "use client";
 
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
@@ -11,46 +15,43 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Field,
-  FieldLabel,
-  FieldError,
-  FieldGroup,
-} from "@/components/ui/field";
-import { Plus, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { createCustomerAction } from "../_lib/actions";
-import { customerSchema, type CustomerInput, type CustomerOutput } from "../_lib/schema";
+import {
+  customerSchema,
+  type CustomerInput,
+  type CustomerOutput,
+} from "../_lib/schema";
+import { CustomerFormFields } from "./customer-form-fields";
 
 export default function CreateCustomerDialog() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<CustomerInput, any, CustomerOutput>({
+  const form = useForm<CustomerInput, unknown, CustomerOutput>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
       name: "",
       phone: "",
       email: "",
       address: "",
-      creditLimitPaise: 0,
+      creditLimitRupees: 0,
     },
   });
 
-  const onSubmit = (data: CustomerOutput) => {
+  function onSubmit(data: CustomerOutput) {
     startTransition(async () => {
+      // Pass raw input — action runs safeParse server-side
       const result = await createCustomerAction(data);
 
       if (result.success) {
-        toast.success("Customer added successfully");
+        toast.success(result.message);
         setOpen(false);
         form.reset();
       } else {
-        toast.error(result.message || "Something went wrong");
+        toast.error(result.message ?? "Something went wrong");
       }
     });
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -64,66 +65,17 @@ export default function CreateCustomerDialog() {
         <DialogHeader>
           <DialogTitle>Add New Customer</DialogTitle>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="name">Name</FieldLabel>
-              <Input
-                id="name"
-                {...form.register("name")}
-                placeholder="e.g. Rahul Sharma"
-              />
-              <FieldError errors={[form.formState.errors.name]} />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="phone">Phone</FieldLabel>
-              <Input
-                id="phone"
-                {...form.register("phone")}
-                placeholder="10 digit mobile"
-              />
-              <FieldError errors={[form.formState.errors.phone]} />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
-              <Input
-                id="email"
-                type="email"
-                {...form.register("email")}
-                placeholder="optional@example.com"
-              />
-              <FieldError errors={[form.formState.errors.email]} />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="address">Address</FieldLabel>
-              <Input
-                id="address"
-                {...form.register("address")}
-                placeholder="Customer address"
-              />
-              <FieldError errors={[form.formState.errors.address]} />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="creditLimit">Credit Limit (₹)</FieldLabel>
-              <Input
-                id="creditLimit"
-                type="number"
-                {...form.register("creditLimitPaise", { valueAsNumber: true })}
-                placeholder="0 (Unlimited)"
-              />
-              <FieldError errors={[form.formState.errors.creditLimitPaise]} />
-            </Field>
-          </FieldGroup>
-
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-4"
+          noValidate
+        >
+          <CustomerFormFields form={form} />
           <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                <Spinner className="mr-2 h-4 w-4" />
+                Saving…
               </>
             ) : (
               "Save Customer"

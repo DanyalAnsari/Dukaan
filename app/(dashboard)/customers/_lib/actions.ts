@@ -1,99 +1,110 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, refresh } from "next/cache";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/database";
 import { customers } from "@/database/schemas";
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
-import { customerSchema, CustomerSchema, CustomerInput } from "./schema";
-import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { customerSchema, type CustomerInput } from "./schema";
+import { ActionResult } from "@/types";
+import { requireShop } from "@/lib/require-shop";
+
+function parseCustomerData(
+  data: CustomerInput
+): ReturnType<typeof customerSchema.safeParse> {
+  return customerSchema.safeParse(data);
+}
+
+const CUSTOMERS_PATH = "/customers";
 
 export async function updateCustomerAction(
   customerId: string,
   data: CustomerInput
-) {
+): Promise<ActionResult> {
+  const { shop } = await requireShop();
+
+  const result = parseCustomerData(data);
+  if (!result.success) {
+    return {
+      success: false,
+      message: "Invalid form data",
+      errors: result.error.issues.map((i) => ({
+        field: i.path[0],
+        message: i.message,
+      })),
+    };
+  }
+
   try {
-    const session = await getSession();
-    if (!session?.user) redirect("/login");
+    const { name, phone, email, address, creditLimitRupees } = result.data;
+    const creditLimitPaise = Math.round((creditLimitRupees ?? 0) * 100);
 
-    const shop = await getShopByUserId(session.user.id);
-    if (!shop) redirect("/setup");
+    const updated = await db
+      .update(customers)
+      .set({ name, phone, email, address, creditLimitPaise })
+      // and(shopId) ensures the customer belongs to THIS shop — prevents cross-shop mutation
+      .where(and(eq(customers.id, customerId), eq(customers.shopId, shop.id)))
+      .returning();
 
-    const result = customerSchema.safeParse(data);
-    if (!result.success) {
-      return {
-        success: false,
-        message: "Invalid form data",
-        errors: result.error.issues.map((issue) => ({
-          field: issue.path[0],
-          message: issue.message,
-        })),
-      };
+    if (updated.length === 0) {
+      return { success: false, message: "Customer not found" };
     }
 
-    const { name, phone, email, address, creditLimitPaise } = result.data;
-    // Convert creditLimitPaise from rupees to paise (user enters rupees)
-    const creditLimit = Math.round(Number(creditLimitPaise || 0) * 100);
+    revalidatePath(CUSTOMERS_PATH);
+    revalidatePath(`${CUSTOMERS_PATH}/${customerId}`);
+    refresh();
 
-    await db
-      .update(customers)
-      .set({
-        name,
-        phone: phone || null,
-        email: email || null,
-        address: address || null,
-        creditLimitPaise: creditLimit,
-      })
-      .where(eq(customers.id, customerId));
-
-    revalidatePath("/customers");
-    revalidatePath(`/customers/${customerId}`);
-    return { success: true };
+    return { success: true, message: "Customer updated successfully" };
   } catch (error) {
-    console.error("Error updating customer:", error);
-    return { success: false, message: "Failed to update customer" };
+    console.error("[updateCustomer]", error);
+    return {
+      success: false,
+      message: "Failed to update customer. Please try again.",
+    };
   }
 }
 
-export async function createCustomerAction(data: CustomerInput) {
+// ─── Create ──────────────────────────────────────────────────────────────────
+
+export async function createCustomerAction(
+  data: CustomerInput
+): Promise<ActionResult> {
+  const { shop } = await requireShop();
+
+  const result = parseCustomerData(data);
+  if (!result.success) {
+    return {
+      success: false,
+      message: "Invalid form data",
+      errors: result.error.issues.map((i) => ({
+        field: i.path[0],
+        message: i.message,
+      })),
+    };
+  }
+
   try {
-    const session = await getSession();
-    if (!session?.user) redirect("/login");
-
-    const shop = await getShopByUserId(session.user.id);
-    if (!shop) redirect("/setup");
-
-    const result = customerSchema.safeParse(data);
-    if (!result.success) {
-      return {
-        success: false,
-        message: "Invalid form data",
-        errors: result.error.issues.map((issue) => ({
-          field: issue.path[0],
-          message: issue.message,
-        })),
-      };
-    }
-
-    const { name, phone, email, address, creditLimitPaise } = result.data;
-    // Convert creditLimitPaise from rupees to paise (user enters rupees)
-    const creditLimit = Math.round(Number(creditLimitPaise || 0) * 100);
+    const { name, phone, email, address, creditLimitRupees } = result.data;
+    const creditLimitPaise = Math.round((creditLimitRupees ?? 0) * 100);
 
     await db.insert(customers).values({
       shopId: shop.id,
       name,
-      phone: phone || null,
-      email: email || null,
-      address: address || null,
-      creditLimitPaise: creditLimit,
+      phone,
+      email,
+      address,
+      creditLimitPaise,
       outstandingBalancePaise: 0,
     });
 
-    revalidatePath("/customers");
-    return { success: true };
+    revalidatePath(CUSTOMERS_PATH);
+    refresh();
+
+    return { success: true, message: "Customer created successfully" };
   } catch (error) {
-    console.error("Error creating customer:", error);
-    return { success: false, message: "Failed to create customer" };
+    console.error("[createCustomer]", error);
+    return {
+      success: false,
+      message: "Failed to create customer. Please try again.",
+    };
   }
 }
