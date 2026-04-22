@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { LOGO } from "@/constants";
+import { getSession } from "@/lib/get-session";
+import { redirect } from "next/navigation";
 
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getSession();
+  if (session?.user) redirect("/dashboard");
+
   return (
     <div className="flex min-h-screen">
       {/* Left — branding */}

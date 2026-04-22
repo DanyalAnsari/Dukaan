@@ -1,7 +1,5 @@
+import "dotenv/config";
 import { sql, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import { createAuthClient } from "better-auth/client";
 
 import * as schema from "../schemas/index.js";
 import {
@@ -16,6 +14,8 @@ import {
   TEST_CREDENTIALS,
   type UserIdMap,
 } from "./data.js";
+import { db } from "../index.js";
+import { auth } from "@/lib/auth.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Validate env
@@ -30,29 +30,11 @@ if (!DATABASE_URL) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Database connection
-// ─────────────────────────────────────────────────────────────────────────────
-
-const pool = new Pool({ connectionString: DATABASE_URL });
-const db = drizzle(pool, { schema });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Better-auth client
-// Uses the running Next.js dev server to create users via the auth API.
-// Make sure your dev server is running before seeding.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const authClient = createAuthClient({
-  baseURL: APP_URL,
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Seed
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function seed() {
   console.log("⏳  Connecting to PostgreSQL…");
-  await pool.query("SELECT 1");
   console.log(`✅  Connected to: ${DATABASE_URL!.split("@")[1]}\n`);
 
   // ── 1. Truncate all tables ────────────────────────────────────────────────
@@ -68,7 +50,7 @@ async function seed() {
       "products",
       "customers",
       "bills",
-      "billItems",
+      "bill_items",
       "payments",
       "purchases"
     RESTART IDENTITY
@@ -86,19 +68,29 @@ async function seed() {
   const userIdMap: UserIdMap = {};
 
   for (const def of seedUserDefs) {
-    const { data, error } = await authClient.signUp.email({
-      name: def.name,
-      email: def.email,
-      password: def.password,
-    });
+    try {
+      // ✅ Server-side API — no { data, error } wrapper, returns object directly
+      const result = await auth.api.signUpEmail({
+        body: {
+          name: def.name,
+          email: def.email,
+          password: def.password,
+        },
+      });
 
-    if (error || !data?.user?.id) {
-      console.error(`❌  Failed to create user ${def.email}:`, error?.message);
-      throw new Error(`User creation failed for ${def.email}`);
+      if (!result?.user?.id) {
+        throw new Error(`No user ID returned for ${def.email}`);
+      }
+
+      userIdMap[def.key] = result.user.id;
+      console.log(`   ✓ ${def.email} (${def.key}) → ${result.user.id}`);
+    } catch (err: any) {
+      console.error(
+        `❌  Failed to create user ${def.email}:`,
+        err?.message ?? err
+      );
+      throw err;
     }
-
-    userIdMap[def.key] = data.user.id;
-    console.log(`   ✓ ${def.email} (${def.key}) → ${data.user.id}`);
   }
 
   console.log(`\n✅  ${seedUserDefs.length} users created\n`);
@@ -133,7 +125,7 @@ async function seed() {
   const shopsData = seedShops(userIdMap);
   const insertedShops = await db
     .insert(schema.shops)
-    .values(shopsData)
+    .values(shopsData )
     .returning({ id: schema.shops.id });
 
   const shopIdMap: Record<string, string> = {};
@@ -255,6 +247,5 @@ seed()
     process.exit(1);
   })
   .finally(async () => {
-    await pool.end();
     console.log("🔌  Disconnected from PostgreSQL");
   });

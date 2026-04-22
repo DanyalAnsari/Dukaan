@@ -1,3 +1,4 @@
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "./schemas";
 
 if (!process.env.DATABASE_URL) {
@@ -24,6 +25,6 @@ const createDb = async () => {
   }
 };
 
-export const db = await createDb();
+export const db = (await createDb()) as NodePgDatabase<typeof schema>;
 
 export { schema };
