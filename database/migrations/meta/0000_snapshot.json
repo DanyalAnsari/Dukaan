@@ -1,5 +1,5 @@
 {
-  "id": "6b31d8bb-8311-4a1a-b7fe-e380becb8706",
+  "id": "b1d205da-704d-4a4d-94ec-33ceece01e25",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -369,8 +369,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.billItems": {
-      "name": "billItems",
+    "public.bill_items": {
+      "name": "bill_items",
       "schema": "",
       "columns": {
         "id": {
@@ -428,6 +428,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "hsn_code": {
+          "name": "hsn_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "gst_amount_paise": {
           "name": "gst_amount_paise",
           "type": "integer",
@@ -442,8 +448,8 @@
         }
       },
       "indexes": {
-        "billItem_billId_idx": {
-          "name": "billItem_billId_idx",
+        "bill_item_bill_idx": {
+          "name": "bill_item_bill_idx",
           "columns": [
             {
               "expression": "bill_id",
@@ -457,8 +463,8 @@
           "method": "btree",
           "with": {}
         },
-        "billItem_productId_idx": {
-          "name": "billItem_productId_idx",
+        "bill_item_product_idx": {
+          "name": "bill_item_product_idx",
           "columns": [
             {
               "expression": "product_id",
@@ -474,9 +480,9 @@
         }
       },
       "foreignKeys": {
-        "billItems_bill_id_bills_id_fk": {
-          "name": "billItems_bill_id_bills_id_fk",
-          "tableFrom": "billItems",
+        "bill_items_bill_id_bills_id_fk": {
+          "name": "bill_items_bill_id_bills_id_fk",
+          "tableFrom": "bill_items",
           "tableTo": "bills",
           "columnsFrom": [
             "bill_id"
@@ -487,9 +493,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "billItems_product_id_products_id_fk": {
-          "name": "billItems_product_id_products_id_fk",
-          "tableFrom": "billItems",
+        "bill_items_product_id_products_id_fk": {
+          "name": "bill_items_product_id_products_id_fk",
+          "tableFrom": "bill_items",
           "tableTo": "products",
           "columnsFrom": [
             "product_id"
@@ -497,7 +503,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -553,7 +559,7 @@
           "name": "discount_paise",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 0
         },
         "gst_total_paise": {
@@ -570,30 +576,32 @@
         },
         "status": {
           "name": "status",
-          "type": "text",
+          "type": "bill_status",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "'paid'"
         },
         "payment_method": {
           "name": "payment_method",
-          "type": "text",
+          "type": "payment_method",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "'cash'"
         },
         "amount_paid_paise": {
           "name": "amount_paid_paise",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 0
         },
         "amount_due_paise": {
           "name": "amount_due_paise",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 0
         },
         "notes": {
@@ -611,8 +619,29 @@
         }
       },
       "indexes": {
-        "bill_shopId_idx": {
-          "name": "bill_shopId_idx",
+        "bill_shop_invoice_unique_idx": {
+          "name": "bill_shop_invoice_unique_idx",
+          "columns": [
+            {
+              "expression": "shop_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "invoice_number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bill_shop_idx": {
+          "name": "bill_shop_idx",
           "columns": [
             {
               "expression": "shop_id",
@@ -626,23 +655,8 @@
           "method": "btree",
           "with": {}
         },
-        "bill_invoiceNumber_idx": {
-          "name": "bill_invoiceNumber_idx",
-          "columns": [
-            {
-              "expression": "invoice_number",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "bill_customerId_idx": {
-          "name": "bill_customerId_idx",
+        "bill_customer_idx": {
+          "name": "bill_customer_idx",
           "columns": [
             {
               "expression": "customer_id",
@@ -656,8 +670,8 @@
           "method": "btree",
           "with": {}
         },
-        "bill_billDate_idx": {
-          "name": "bill_billDate_idx",
+        "bill_date_idx": {
+          "name": "bill_date_idx",
           "columns": [
             {
               "expression": "bill_date",
@@ -696,7 +710,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -751,7 +765,7 @@
           "name": "outstanding_balance_paise",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 0
         },
         "credit_limit_paise": {
@@ -783,8 +797,8 @@
         }
       },
       "indexes": {
-        "customer_shopId_idx": {
-          "name": "customer_shopId_idx",
+        "customer_shop_idx": {
+          "name": "customer_shop_idx",
           "columns": [
             {
               "expression": "shop_id",
@@ -872,9 +886,10 @@
         },
         "payment_method": {
           "name": "payment_method",
-          "type": "text",
+          "type": "payment_method",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "'cash'"
         },
         "reference_number": {
@@ -898,8 +913,8 @@
         }
       },
       "indexes": {
-        "payment_shopId_idx": {
-          "name": "payment_shopId_idx",
+        "payment_shop_idx": {
+          "name": "payment_shop_idx",
           "columns": [
             {
               "expression": "shop_id",
@@ -913,8 +928,8 @@
           "method": "btree",
           "with": {}
         },
-        "payment_customerId_idx": {
-          "name": "payment_customerId_idx",
+        "payment_customer_idx": {
+          "name": "payment_customer_idx",
           "columns": [
             {
               "expression": "customer_id",
@@ -928,8 +943,8 @@
           "method": "btree",
           "with": {}
         },
-        "payment_billId_idx": {
-          "name": "payment_billId_idx",
+        "payment_bill_idx": {
+          "name": "payment_bill_idx",
           "columns": [
             {
               "expression": "bill_id",
@@ -968,7 +983,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         },
         "payments_bill_id_bills_id_fk": {
@@ -981,7 +996,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1018,7 +1033,7 @@
           "name": "category",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "'Uncategorized'"
         },
         "sku": {
@@ -1043,7 +1058,7 @@
           "name": "unit",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "'pcs'"
         },
         "unit_price_paise": {
@@ -1062,21 +1077,21 @@
           "name": "gst_rate",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 18
         },
         "stock_qty": {
           "name": "stock_qty",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 0
         },
         "reorder_level": {
           "name": "reorder_level",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 10
         },
         "is_active": {
@@ -1102,8 +1117,8 @@
         }
       },
       "indexes": {
-        "product_shopId_idx": {
-          "name": "product_shopId_idx",
+        "product_shop_idx": {
+          "name": "product_shop_idx",
           "columns": [
             {
               "expression": "shop_id",
@@ -1137,6 +1152,27 @@
           "columns": [
             {
               "expression": "barcode",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "product_active_shop_idx": {
+          "name": "product_active_shop_idx",
+          "columns": [
+            {
+              "expression": "shop_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_active",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1244,8 +1280,8 @@
         }
       },
       "indexes": {
-        "purchase_shopId_idx": {
-          "name": "purchase_shopId_idx",
+        "purchase_shop_idx": {
+          "name": "purchase_shop_idx",
           "columns": [
             {
               "expression": "shop_id",
@@ -1259,8 +1295,8 @@
           "method": "btree",
           "with": {}
         },
-        "purchase_productId_idx": {
-          "name": "purchase_productId_idx",
+        "purchase_product_idx": {
+          "name": "purchase_product_idx",
           "columns": [
             {
               "expression": "product_id",
@@ -1299,7 +1335,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
@@ -1350,18 +1386,30 @@
           "primaryKey": false,
           "notNull": false
         },
+        "pan": {
+          "name": "pan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upi_id": {
+          "name": "upi_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "invoice_prefix": {
           "name": "invoice_prefix",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "'INV'"
         },
         "next_invoice_number": {
           "name": "next_invoice_number",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 1
         },
         "created_at": {
@@ -1380,8 +1428,8 @@
         }
       },
       "indexes": {
-        "shop_ownerId_idx": {
-          "name": "shop_ownerId_idx",
+        "shop_owner_idx": {
+          "name": "shop_owner_idx",
           "columns": [
             {
               "expression": "owner_id",
@@ -1418,7 +1466,28 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.bill_status": {
+      "name": "bill_status",
+      "schema": "public",
+      "values": [
+        "paid",
+        "credit",
+        "partial"
+      ]
+    },
+    "public.payment_method": {
+      "name": "payment_method",
+      "schema": "public",
+      "values": [
+        "cash",
+        "upi",
+        "card",
+        "bank",
+        "credit"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},

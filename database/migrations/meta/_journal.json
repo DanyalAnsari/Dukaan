@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1776450099391,
-      "tag": "0000_icy_jetstream",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1776618809071,
-      "tag": "0001_nifty_firedrake",
+      "when": 1776867395109,
+      "tag": "0000_superb_tomorrow_man",
       "breakpoints": true
     }
   ]
