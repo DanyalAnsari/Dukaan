@@ -1,22 +1,23 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { redirect } from "next/navigation";
+import { Plus, Package, PackageX } from "lucide-react";
 import { getSession } from "@/lib/get-session";
 import { getShopByUserId } from "@/database/data/shop";
 import { getActiveProducts } from "@/database/data/products";
-
 import { Button } from "@/components/ui/button";
 import StatsCard from "@/components/shared/stats-card";
 import { ProductsDataTable } from "./_components/data-table";
-import { deleteProductAction } from "./actions";
+import { deleteProductAction } from "./_lib/actions";
 
 export default async function ProductsPage() {
   const session = await getSession();
-  const shop = (await getShopByUserId(session!.user.id))!;
+  if (!session?.user) redirect("/login");
 
-  // Fetch active products from data layer
+  const shop = await getShopByUserId(session.user.id);
+  if (!shop) redirect("/setup");
+
   const allProducts = await getActiveProducts(shop.id);
 
-  // Calculate stats
   const totalProducts = allProducts.length;
   const lowStockProducts = allProducts.filter(
     (p) => (p.stockQty ?? 0) > 0 && (p.stockQty ?? 0) <= (p.reorderLevel ?? 10)
@@ -29,21 +30,28 @@ export default async function ProductsPage() {
     {
       title: "Total Products",
       stat: totalProducts,
+      icon: Package,
+      description: "Active products in catalog",
+      className: "font-mono",
     },
     {
       title: "Low Stock",
       stat: lowStockProducts,
-      className: "text-amber-600",
+      icon: Package,
+      description: "Below reorder level",
+      className: "font-mono text-partial",
     },
     {
       title: "Out of Stock",
       stat: outOfStockProducts,
-      className: "text-red-600",
+      icon: PackageX,
+      description: "Zero quantity remaining",
+      className: "text-unpaid",
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 fade-in">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -65,30 +73,22 @@ export default async function ProductsPage() {
         {stats.map((item) => (
           <StatsCard
             key={item.title}
+            icon={item.icon}
             title={item.title}
             stat={item.stat}
             contentClassName={item.className}
+            description={item.description}
           />
         ))}
       </div>
 
-      {/* Table */}
-      {allProducts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <p className="mb-4 text-muted-foreground">No products found</p>
-          <Button asChild>
-            <Link href="/products/new">Add your first product</Link>
-          </Button>
-        </div>
-      ) : (
-        <ProductsDataTable
-          data={allProducts}
-          onDelete={async (id) => {
-            "use server";
-            await deleteProductAction(id);
-          }}
-        />
-      )}
+      <ProductsDataTable
+        data={allProducts}
+        onDelete={async (id) => {
+          "use server";
+          await deleteProductAction(id);
+        }}
+      />
     </div>
   );
 }

@@ -4,8 +4,14 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import type { InferSelectModel } from "drizzle-orm";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Card,
   CardContent,
@@ -14,87 +20,88 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Field,
   FieldLabel,
   FieldError,
   FieldGroup,
 } from "@/components/ui/field";
-import { Loader2, ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { toast } from "sonner";
-import { productSchema, type ProductInput, type ProductOutput } from "../_lib/schema";
-import { type Product } from "@/types";
+
+import {
+  productSchema,
+  type ProductInput,
+  type ProductOutput,
+  type ProductSchema,
+} from "../_lib/schema";
+import { products } from "@/database/schemas";
+import { buildDefaultValues } from "../_lib/utils";
+import { SelectField } from "./select-field";
+import { GST_RATE_OPTIONS, UNIT_OPTIONS } from "@/constants";
+
+type Product = InferSelectModel<typeof products>;
 
 interface ProductFormProps {
   initialData?: Product;
-  onSubmit: (data: any) => Promise<{ success: boolean; message?: string }>;
+  onSubmit: (
+    data: ProductSchema
+  ) => Promise<{ success: boolean; message?: string }>;
   title: string;
   description: string;
 }
 
-export function ProductForm({ initialData, onSubmit: submitAction, title, description }: ProductFormProps) {
+export function ProductForm({
+  initialData,
+  onSubmit: submitAction,
+  title,
+  description,
+}: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<ProductInput, any, ProductOutput>({
+  const form = useForm<ProductInput, unknown, ProductOutput>({
     resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: initialData?.name || "",
-      category: initialData?.category || "Uncategorized",
-      sku: initialData?.sku || "",
-      barcode: initialData?.barcode || "",
-      hsnCode: initialData?.hsnCode || "",
-      unit: initialData?.unit || "pcs",
-      unitPricePaise: initialData ? initialData.unitPricePaise / 100 : 0,
-      mrpPaise: initialData?.mrpPaise ? initialData.mrpPaise / 100 : 0,
-      gstRate: initialData?.gstRate || 18,
-      stockQty: initialData?.stockQty || 0,
-      reorderLevel: initialData?.reorderLevel || 10,
-    },
+    defaultValues: buildDefaultValues(initialData),
   });
 
-  const onSubmit = (data: ProductOutput) => {
-    const payload = {
+  const { errors } = form.formState;
+
+  function onSubmit(data: ProductOutput) {
+    const payload: ProductSchema = {
       ...data,
       unitPricePaise: Math.round(data.unitPricePaise * 100),
-      mrpPaise: data.mrpPaise ? Math.round(data.mrpPaise * 100) : null,
+      mrpPaise: data.mrpPaise != null ? Math.round(data.mrpPaise * 100) : null,
     };
 
     startTransition(async () => {
       const result = await submitAction(payload);
-
       if (result.success) {
-        toast.success(initialData ? "Product updated successfully" : "Product created successfully");
+        toast.success(
+          result.message ??
+            (initialData ? "Product updated" : "Product created")
+        );
         router.push("/products");
-        router.refresh();
       } else {
-        toast.error(result.message || "Something went wrong");
+        toast.error(result.message ?? "Something went wrong");
       }
     });
-  };
+  }
 
   return (
     <div className="max-w-4xl space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/products">
-          <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/products" aria-label="Back to products">
             <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         <div>
           <h1 className="text-2xl font-semibold">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
       </div>
 
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      {/* Form */}
+      <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Basic Info */}
           <Card>
@@ -111,17 +118,17 @@ export function ProductForm({ initialData, onSubmit: submitAction, title, descri
                     {...form.register("name")}
                     placeholder="e.g. Parle-G 100g"
                   />
-                  <FieldError errors={[form.formState.errors.name]} />
+                  {errors.name && <FieldError errors={[errors.name]} />}
                 </Field>
-                
+
                 <Field>
                   <FieldLabel htmlFor="category">Category</FieldLabel>
                   <Input
                     id="category"
                     {...form.register("category")}
-                    placeholder="e.g. Snacks, Dairy, Drinks"
+                    placeholder="e.g. Snacks, Dairy"
                   />
-                  <FieldError errors={[form.formState.errors.category]} />
+                  {errors.category && <FieldError errors={[errors.category]} />}
                 </Field>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -132,7 +139,7 @@ export function ProductForm({ initialData, onSubmit: submitAction, title, descri
                       {...form.register("sku")}
                       placeholder="Internal code"
                     />
-                    <FieldError errors={[form.formState.errors.sku]} />
+                    {errors.sku && <FieldError errors={[errors.sku]} />}
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="hsnCode">HSN Code</FieldLabel>
@@ -141,39 +148,30 @@ export function ProductForm({ initialData, onSubmit: submitAction, title, descri
                       {...form.register("hsnCode")}
                       placeholder="Tax code"
                     />
-                    <FieldError errors={[form.formState.errors.hsnCode]} />
+                    {errors.hsnCode && <FieldError errors={[errors.hsnCode]} />}
                   </Field>
                 </div>
 
-                <Field>
-                  <FieldLabel htmlFor="unit">Unit</FieldLabel>
-                  <Select
-                    value={form.watch("unit")}
-                    onValueChange={(val) => form.setValue("unit", val, { shouldDirty: true })}
-                  >
-                    <SelectTrigger id="unit">
-                      <SelectValue placeholder="Select unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pcs">Pieces (pcs)</SelectItem>
-                      <SelectItem value="kg">Kilogram (kg)</SelectItem>
-                      <SelectItem value="g">Gram (g)</SelectItem>
-                      <SelectItem value="ltr">Liter (ltr)</SelectItem>
-                      <SelectItem value="pkt">Packet (pkt)</SelectItem>
-                      <SelectItem value="box">Box</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FieldError errors={[form.formState.errors.unit]} />
-                </Field>
+                <SelectField
+                  control={form.control}
+                  name="unit"
+                  label="Unit"
+                  htmlFor="unit"
+                  placeholder="Select unit"
+                  options={UNIT_OPTIONS}
+                  error={errors.unit}
+                />
               </FieldGroup>
             </CardContent>
           </Card>
 
-          {/* Pricing & GST */}
+          {/* Pricing & Tax */}
           <Card>
             <CardHeader>
               <CardTitle>Pricing & Tax</CardTitle>
-              <CardDescription>Set your selling price</CardDescription>
+              <CardDescription>
+                Set your selling price and GST rate
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <FieldGroup>
@@ -184,10 +182,15 @@ export function ProductForm({ initialData, onSubmit: submitAction, title, descri
                       id="unitPrice"
                       type="number"
                       step="0.01"
-                      {...form.register("unitPricePaise", { valueAsNumber: true })}
+                      min="0"
+                      {...form.register("unitPricePaise", {
+                        valueAsNumber: true,
+                      })}
                       placeholder="0.00"
                     />
-                    <FieldError errors={[form.formState.errors.unitPricePaise]} />
+                    {errors.unitPricePaise && (
+                      <FieldError errors={[errors.unitPricePaise]} />
+                    )}
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="mrp">MRP (₹)</FieldLabel>
@@ -195,32 +198,27 @@ export function ProductForm({ initialData, onSubmit: submitAction, title, descri
                       id="mrp"
                       type="number"
                       step="0.01"
+                      min="0"
                       {...form.register("mrpPaise", { valueAsNumber: true })}
                       placeholder="0.00"
                     />
-                    <FieldError errors={[form.formState.errors.mrpPaise]} />
+                    {errors.mrpPaise && (
+                      <FieldError errors={[errors.mrpPaise]} />
+                    )}
                   </Field>
                 </div>
 
-                <Field>
-                  <FieldLabel htmlFor="gstRate">GST Rate (%)</FieldLabel>
-                  <Select
-                    value={form.watch("gstRate").toString()}
-                    onValueChange={(val) => form.setValue("gstRate", Number(val), { shouldDirty: true })}
-                  >
-                    <SelectTrigger id="gstRate">
-                      <SelectValue placeholder="Select GST" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">0% (Nil)</SelectItem>
-                      <SelectItem value="5">5%</SelectItem>
-                      <SelectItem value="12">12%</SelectItem>
-                      <SelectItem value="18">18%</SelectItem>
-                      <SelectItem value="28">28%</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FieldError errors={[form.formState.errors.gstRate]} />
-                </Field>
+                <SelectField
+                  control={form.control}
+                  name="gstRate"
+                  label="GST Rate (%)"
+                  htmlFor="gstRate"
+                  placeholder="Select GST rate"
+                  options={GST_RATE_OPTIONS}
+                  error={errors.gstRate}
+                  toStringValue={String}
+                  fromStringValue={Number}
+                />
               </FieldGroup>
             </CardContent>
           </Card>
@@ -229,46 +227,50 @@ export function ProductForm({ initialData, onSubmit: submitAction, title, descri
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Inventory</CardTitle>
-              <CardDescription>Stock management</CardDescription>
+              <CardDescription>Stock levels and reorder alerts</CardDescription>
             </CardHeader>
             <CardContent>
-              <FieldGroup className="flex-row">
+              <FieldGroup>
+                {" "}
+                {/* ← new shadcn FieldGroup prop */}
                 <Field className="flex-1">
                   <FieldLabel htmlFor="stockQty">Current Stock</FieldLabel>
                   <Input
                     id="stockQty"
                     type="number"
+                    min="0"
                     {...form.register("stockQty", { valueAsNumber: true })}
                     placeholder="Current quantity"
                   />
-                  <FieldError errors={[form.formState.errors.stockQty]} />
+                  {errors.stockQty && <FieldError errors={[errors.stockQty]} />}
                 </Field>
                 <Field className="flex-1">
                   <FieldLabel htmlFor="reorderLevel">Reorder Level</FieldLabel>
                   <Input
                     id="reorderLevel"
                     type="number"
+                    min="0"
                     {...form.register("reorderLevel", { valueAsNumber: true })}
                     placeholder="Alert at this level"
                   />
-                  <FieldError errors={[form.formState.errors.reorderLevel]} />
+                  {errors.reorderLevel && (
+                    <FieldError errors={[errors.reorderLevel]} />
+                  )}
                 </Field>
               </FieldGroup>
             </CardContent>
           </Card>
         </div>
 
+        {/* Footer Actions */}
         <div className="mt-6 flex justify-end gap-4">
-          <Link href="/products">
-            <Button variant="outline" type="button">
-              Cancel
-            </Button>
-          </Link>
+          <Button variant="outline" type="button" asChild>
+            <Link href="/products">Cancel</Link>
+          </Button>
           <Button type="submit" disabled={isPending}>
             {isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                <Spinner className="mr-2 h-4 w-4" /> Saving…
               </>
             ) : (
               "Save Product"

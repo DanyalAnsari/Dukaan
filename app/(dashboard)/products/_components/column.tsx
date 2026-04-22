@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTableColumnHeader } from "@/components/data-table";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatCurrency } from "@/lib/utils";
 import { type Product } from "@/types";
+import Link from "next/link";
 
 // ---------------------------------------------------------------------------
 // Stock status helper
@@ -100,12 +101,10 @@ export function getProductColumns({
     {
       accessorKey: "unitPricePaise",
       header: ({ column }) => (
-        <div className="text-right">
-          <DataTableColumnHeader column={column} title="Unit Price" />
-        </div>
+        <DataTableColumnHeader column={column} title="Unit Price" />
       ),
       cell: ({ row }) => (
-        <div className="text-right font-mono">
+        <div className="font-mono">
           {formatCurrency(row.original.unitPricePaise)}
         </div>
       ),
@@ -114,11 +113,11 @@ export function getProductColumns({
     // MRP (actual schema column)
     {
       accessorKey: "mrpPaise",
-      header: () => <div className="text-right">MRP</div>,
+      header: () => <div>MRP</div>,
       cell: ({ row }) => {
         const mrp = row.original.mrpPaise;
         return (
-          <div className="text-right font-mono text-muted-foreground">
+          <div className="font-mono text-muted-foreground">
             {mrp ? formatCurrency(mrp) : "—"}
           </div>
         );
@@ -161,7 +160,7 @@ export function getProductColumns({
     // GST Rate
     {
       accessorKey: "gstRate",
-      header: () => <div className="text-center">GST%</div>,
+      header: () => <div>GST%</div>,
       cell: ({ row }) => (
         <div className="text-center">{row.original.gstRate}%</div>
       ),
@@ -193,18 +192,25 @@ export function getProductColumns({
       id: "actions",
       cell: ({ row }) => {
         const product = row.original;
+        const qty = product.stockQty ?? 0;
+        const level = product.reorderLevel ?? 10;
+        const needsRestock = qty === 0 || qty <= level;
+
         return (
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => {
-                window.location.href = `/products/${product.id}/edit`;
-              }}
-            >
-              <Edit className="h-4 w-4" />
-              <span className="sr-only">Edit</span>
+            {needsRestock && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <Link href={`/purchases/new?productId=${product.id}`}>
+                  <RefreshCw className="size-4" />
+                  <span className="sr-only">Restock</span>
+                </Link>
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+              <Link href={`/products/${product.id}/edit`}>
+                <Edit className="h-4 w-4" />
+                <span className="sr-only">Edit</span>
+              </Link>
             </Button>
 
             <AlertDialog>

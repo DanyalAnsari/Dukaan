@@ -8,6 +8,7 @@ import {
   DataTableViewOptions,
 } from "@/components/data-table";
 import { getProductColumns } from "./column";
+import { CardHeader } from "@/components/ui/card";
 
 // ---------------------------------------------------------------------------
 // Stock status filter options
@@ -32,10 +33,7 @@ interface ProductsDataTableProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ProductsDataTable({
-  data,
-  onDelete,
-}: ProductsDataTableProps) {
+export function ProductsDataTable({ data, onDelete }: ProductsDataTableProps) {
   const columns = getProductColumns({ onDelete });
 
   return (
@@ -58,23 +56,24 @@ export function ProductsDataTable({
       getRowClassName={(product) => {
         const qty = product.stockQty ?? 0;
         const threshold = product.reorderLevel ?? 10;
-        if (qty === 0) return "bg-red-50/50";
-        if (qty <= threshold) return "bg-amber-50/50";
+        if (qty === 0)
+          return "bg-(--status-unpaid-bg) text-(--status-unpaid-text)";
+        if (qty <= threshold)
+          return "bg-(--status-partial-bg) text-(--status-partial-text)";
         return "";
       }}
       toolbar={(table) => (
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <DataTableSearch
-            table={table}
-            placeholder="Search by name, SKU..."
-          />
-          <DataTableFacetedFilter
-            column={table.getColumn("stockStatus")!}
-            title="Status"
-            options={stockStatusOptions}
-          />
-          <DataTableViewOptions table={table} />
-        </div>
+        <CardHeader className="flex-col gap-4 p-0 md:flex-row md:items-center">
+          <DataTableSearch table={table} placeholder="Search by name, SKU..." />
+          <div className="flex flex-wrap items-center justify-between space-x-2">
+            <DataTableFacetedFilter
+              column={table.getColumn("stockStatus")!}
+              title="Status"
+              options={stockStatusOptions}
+            />
+            <DataTableViewOptions table={table} />
+          </div>
+        </CardHeader>
       )}
     />
   );

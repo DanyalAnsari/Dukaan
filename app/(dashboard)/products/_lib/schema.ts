@@ -3,17 +3,36 @@ import { z } from "zod";
 export const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   category: z.string().default("Uncategorized"),
-  sku: z.string().nullable().or(z.literal("")),
-  barcode: z.string().nullable().or(z.literal("")),
-  hsnCode: z.string().nullable().or(z.literal("")),
-  unit: z.string().default("pcs"),
-  unitPricePaise: z.coerce.number().min(0, "Price must be positive"),
-  mrpPaise: z.coerce.number().min(0).nullable(),
-  gstRate: z.coerce.number().min(0).max(100).default(18),
-  stockQty: z.coerce.number().min(0, "Stock cannot be negative").default(0),
-  reorderLevel: z.coerce.number().min(0).default(10),
+  sku: z.string().optional().default(""),
+  barcode: z.string().optional().default(""),
+  hsnCode: z.string().optional().default(""),
+  unit: z.enum(["pcs", "kg", "g", "ltr", "pkt", "box"]).default("pcs"),
+  // UI layer: rupees (float). Server layer converts to paise.
+  unitPricePaise: z
+    .number({ error: "Enter a valid price" })
+    .nonnegative("Price must be ≥ 0"),
+  mrpPaise: z
+    .number({ error: "Enter a valid MRP" })
+    .nonnegative()
+    .nullable()
+    .default(null),
+  gstRate: z
+    .union([
+      z.literal(0),
+      z.literal(5),
+      z.literal(12),
+      z.literal(18),
+      z.literal(28),
+    ])
+    .default(18),
+  stockQty: z.number().int().nonnegative().default(0),
+  reorderLevel: z.number().int().nonnegative().default(10),
 });
 
 export type ProductInput = z.input<typeof productSchema>;
 export type ProductOutput = z.output<typeof productSchema>;
-export type ProductSchema = z.infer<typeof productSchema>;
+// What the server action actually receives (already in paise)
+export type ProductSchema = ProductOutput & {
+  unitPricePaise: number;
+  mrpPaise: number | null;
+};

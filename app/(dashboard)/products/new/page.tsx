@@ -1,6 +1,4 @@
-"use client";
-
-import { createProductAction } from "./_lib/actions";
+import { createProductAction } from "../_lib/actions";
 import { ProductForm } from "../_components/product-form";
 
 export default function NewProductPage() {
