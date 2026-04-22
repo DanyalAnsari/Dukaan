@@ -23,4 +23,7 @@ export const auth = betterAuth({
     database: { generateId: "uuid" },
   },
   plugins: [nextCookies()],
+  basePath: "/api/auth",
+  baseURL: process.env.NEXT_PUBLIC_APP_URL,
+  trustedOrigins: [process.env.NEXT_PUBLIC_APP_URL!],
 });
