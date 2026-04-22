@@ -11,7 +11,7 @@ export default async function SetupPageLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session?.user) redirect("/login");
 
   const shop = await getShopByUserId(session.user.id);
   if (shop) redirect("/dashboard");

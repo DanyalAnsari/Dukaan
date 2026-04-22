@@ -44,6 +44,8 @@ export const seedShops = (users: UserIdMap) => [
     address: "123 Main Street, Mumbai, Maharashtra 400001",
     phone: "+91 98765 43210",
     gstin: "27AABCU9603R1ZM",
+    pan: "ABCDE1234F",
+    upiId: "kumar.general@okaxis",
     invoicePrefix: "KGS",
     nextInvoiceNumber: 1001,
   },
@@ -53,6 +55,8 @@ export const seedShops = (users: UserIdMap) => [
     address: "456 Park Road, Delhi 110001",
     phone: "+91 98765 43211",
     gstin: "07AABCU9603R1ZN",
+    pan: "FGHIJ5678K",
+    upiId: "priya.elec@okhdfc",
     invoicePrefix: "PE",
     nextInvoiceNumber: 2001,
   },
@@ -66,6 +70,7 @@ export const seedProducts = (shops: Record<string, string>) => [
   {
     shopId: shops.shop1,
     name: "Tata Salt",
+    category: "Grocery",
     sku: "SALT-001",
     barcode: "8901063110014",
     hsnCode: "25010091",
@@ -80,6 +85,7 @@ export const seedProducts = (shops: Record<string, string>) => [
   {
     shopId: shops.shop1,
     name: "Fortune Sunflower Oil",
+    category: "Grocery",
     sku: "OIL-001",
     barcode: "8901499000010",
     hsnCode: "15121100",
@@ -94,6 +100,7 @@ export const seedProducts = (shops: Record<string, string>) => [
   {
     shopId: shops.shop1,
     name: "Parle-G Biscuits",
+    category: "Snacks",
     sku: "BIS-001",
     barcode: "8901719100017",
     hsnCode: "19053100",
@@ -108,6 +115,7 @@ export const seedProducts = (shops: Record<string, string>) => [
   {
     shopId: shops.shop1,
     name: "Amul Milk 1L",
+    category: "Dairy",
     sku: "MILK-001",
     barcode: "8901430100011",
     hsnCode: "04011000",
@@ -122,6 +130,7 @@ export const seedProducts = (shops: Record<string, string>) => [
   {
     shopId: shops.shop2,
     name: 'Samsung LED TV 32"',
+    category: "Electronics",
     sku: "TV-SAM-32",
     barcode: "8806090351013",
     hsnCode: "85287210",
@@ -136,6 +145,7 @@ export const seedProducts = (shops: Record<string, string>) => [
   {
     shopId: shops.shop2,
     name: "LG Washing Machine 6kg",
+    category: "Appliances",
     sku: "WM-LG-6",
     barcode: "8806084100012",
     hsnCode: "84501100",
@@ -150,6 +160,7 @@ export const seedProducts = (shops: Record<string, string>) => [
   {
     shopId: shops.shop2,
     name: "Philips LED Bulb 9W",
+    category: "Electricals",
     sku: "BULB-PHI-9",
     barcode: "8711500100016",
     hsnCode: "85395000",
@@ -289,6 +300,21 @@ export const seedBills = (
     amountDuePaise: 536000,
     notes: "Remaining amount to be paid on delivery",
   },
+  {
+    shopId: shops.shop1,
+    invoiceNumber: "KGS-1003",
+    customerId: customers.customer3, // Walk-in
+    billDate: new Date(),
+    subtotalPaise: 500,
+    discountPaise: 0,
+    gstTotalPaise: 60,
+    totalPaise: 560,
+    status: "draft" as const,
+    paymentMethod: "cash" as const,
+    amountPaidPaise: 0,
+    amountDuePaise: 560,
+    notes: "Draft bill for walk-in",
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -308,6 +334,7 @@ export const seedBillItems = (
     quantity: 2,
     unitPricePaise: 2000,
     gstRate: 0,
+    hsnCode: "25010091",
     gstAmountPaise: 0,
     lineTotalPaise: 4000,
   },
@@ -320,6 +347,7 @@ export const seedBillItems = (
     quantity: 1,
     unitPricePaise: 15000,
     gstRate: 5,
+    hsnCode: "15121100",
     gstAmountPaise: 750,
     lineTotalPaise: 15750,
   },
@@ -332,6 +360,7 @@ export const seedBillItems = (
     quantity: 5,
     unitPricePaise: 500,
     gstRate: 12,
+    hsnCode: "19053100",
     gstAmountPaise: 300,
     lineTotalPaise: 2800,
   },
@@ -344,6 +373,7 @@ export const seedBillItems = (
     quantity: 1,
     unitPricePaise: 6000,
     gstRate: 0,
+    hsnCode: "04011000",
     gstAmountPaise: 0,
     lineTotalPaise: 6000,
   },
@@ -356,6 +386,7 @@ export const seedBillItems = (
     quantity: 1,
     unitPricePaise: 2000,
     gstRate: 0,
+    hsnCode: "25010091",
     gstAmountPaise: 0,
     lineTotalPaise: 2000,
   },
@@ -368,6 +399,7 @@ export const seedBillItems = (
     quantity: 1,
     unitPricePaise: 1500000,
     gstRate: 18,
+    hsnCode: "85287210",
     gstAmountPaise: 270000,
     lineTotalPaise: 1770000,
   },
@@ -380,8 +412,22 @@ export const seedBillItems = (
     quantity: 1,
     unitPricePaise: 1200000,
     gstRate: 28,
+    hsnCode: "84501100",
     gstAmountPaise: 336000,
     lineTotalPaise: 1536000,
+  },
+  {
+    billId: bills.bill5, // KGS-1003 (draft)
+    productId: products.product3,
+    productName: "Parle-G Biscuits",
+    productSku: "BIS-001",
+    unit: "pcs",
+    quantity: 1,
+    unitPricePaise: 500,
+    gstRate: 12,
+    hsnCode: "19053100",
+    gstAmountPaise: 60,
+    lineTotalPaise: 560,
   },
 ];
 
@@ -423,6 +469,16 @@ export const seedPayments = (
     referenceNumber: null,
     notes: "Partial payment",
     createdAt: new Date("2024-01-12T15:35:00"),
+  },
+  {
+    shopId: shops.shop1,
+    customerId: customers.customer2,
+    billId: null, // Advance payment or general credit clearing
+    amountPaise: 50000,
+    paymentMethod: "bank" as const,
+    referenceNumber: "TXN11223344",
+    notes: "Monthly credit clearance",
+    createdAt: new Date(),
   },
 ];
 

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionCookie } from "better-auth/cookies";
+import { getSession } from "./lib/get-session";
 
 export async function proxy(request: NextRequest) {
-  const sessionCookie = getSessionCookie(request);
+  const session = await getSession();
   const pathname = request.nextUrl.pathname;
 
   const isDashboardRoute =
@@ -18,17 +18,17 @@ export async function proxy(request: NextRequest) {
   const isSetupRoute = pathname.startsWith("/setup");
 
   // Redirect to login if accessing dashboard without session
-  if (isDashboardRoute && !sessionCookie) {
+  if (isDashboardRoute && !session) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // Redirect to dashboard if already logged in and visiting auth pages
-  if (isAuthRoute && sessionCookie) {
+  if (isAuthRoute && session) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   // Redirect to setup if logged in but no shop (will be checked on setup page)
-  if (isSetupRoute && !sessionCookie) {
+  if (isSetupRoute && !session) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
