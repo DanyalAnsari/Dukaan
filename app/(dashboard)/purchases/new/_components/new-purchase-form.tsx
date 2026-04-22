@@ -4,9 +4,16 @@ import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+import { toast } from "sonner";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { InferSelectModel } from "drizzle-orm";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Card,
   CardContent,
@@ -33,58 +40,87 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Loader2, Check, ChevronsUpDown } from "lucide-react";
-import Link from "next/link";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { purchaseSchema, type PurchaseInput, type PurchaseOutput } from "../../_lib/schema";
-import { createPurchaseAction } from "../../actions";
-import { type Product } from "@/types";
+
+import {
+  purchaseSchema,
+  type PurchaseInput,
+  type PurchaseOutput,
+} from "../../_lib/schema";
+import { products } from "@/database/schemas";
+import { createPurchaseAction } from "../../_lib/actions";
+
+type Product = InferSelectModel<typeof products>;
 
 interface NewPurchaseFormProps {
   products: Product[];
+  // Passed from page when navigating from a product row's Restock button
+  initialProductId?: string;
 }
 
-export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
+// ─── Default values factory ───────────────────────────────────────────────────
+
+function buildDefaultValues(
+  productList: Product[],
+  initialProductId?: string
+): PurchaseInput {
+  const preSelected = initialProductId
+    ? productList.find((p) => p.id === initialProductId)
+    : undefined;
+
+  return {
+    productId: initialProductId ?? "",
+    quantity: 1,
+    // Pre-fill unit cost from the product's sell price if coming from a restock link
+    unitCostRupees: preSelected ? preSelected.unitPricePaise / 100 : 0,
+    purchaseDate: new Date().toISOString().split("T")[0],
+    supplierName: "",
+    batchNumber: "",
+    expiryDate: "",
+    notes: "",
+  };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export function NewPurchaseForm({
+  products,
+  initialProductId,
+}: NewPurchaseFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
-  const form = useForm<PurchaseInput, any, PurchaseOutput>({
+  const form = useForm<PurchaseInput, unknown, PurchaseOutput>({
     resolver: zodResolver(purchaseSchema),
-    defaultValues: {
-      productId: "",
-      quantity: 1,
-      unitCostPaise: 0,
-      purchaseDate: new Date().toISOString().split("T")[0],
-      supplierName: "",
-      batchNumber: "",
-      expiryDate: "",
-      notes: "",
-    },
+    defaultValues: buildDefaultValues(products, initialProductId),
   });
 
+  const { errors } = form.formState;
   const selectedProductId = form.watch("productId");
   const selectedProduct = products.find((p) => p.id === selectedProductId);
 
-  const onSubmit = (data: PurchaseOutput) => {
+  function onSubmit(data: PurchaseOutput) {
     startTransition(async () => {
       const result = await createPurchaseAction(data);
 
       if (result.success) {
-        toast.success("Purchase recorded and stock updated");
+        toast.success("Purchase recorded — stock updated");
         router.push("/purchases");
-        router.refresh();
+        // No router.refresh() needed — server action calls refresh() from next/cache
       } else {
-        toast.error(result.message || "Failed to record purchase");
+        toast.error(result.message ?? "Failed to record purchase");
       }
     });
-  };
+  }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-6"
+      noValidate
+    >
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Product Selection */}
+        {/* Product selection */}
         <Card>
           <CardHeader>
             <CardTitle>Product Details</CardTitle>
@@ -95,7 +131,7 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
           <CardContent>
             <FieldGroup>
               <Field>
-                <FieldLabel>Select Product</FieldLabel>
+                <FieldLabel>Product</FieldLabel>
                 <Popover open={open} onOpenChange={setOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -106,13 +142,13 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
                     >
                       {selectedProduct
                         ? selectedProduct.name
-                        : "Search product..."}
+                        : "Search product…"}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
                     <Command>
-                      <CommandInput placeholder="Search product..." />
+                      <CommandInput placeholder="Search product…" />
                       <CommandList>
                         <CommandEmpty>No product found.</CommandEmpty>
                         <CommandGroup>
@@ -121,14 +157,13 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
                               key={product.id}
                               value={product.name}
                               onSelect={() => {
-                                form.setValue("productId", product.id);
-                                // Pre-fill cost if MRP exists
-                                if (
-                                  product.unitPricePaise &&
-                                  form.getValues("unitCostPaise") === 0
-                                ) {
+                                form.setValue("productId", product.id, {
+                                  shouldValidate: true,
+                                });
+                                // Pre-fill cost from sell price only if field is still 0
+                                if (form.getValues("unitCostRupees") === 0) {
                                   form.setValue(
-                                    "unitCostPaise",
+                                    "unitCostRupees",
                                     product.unitPricePaise / 100
                                   );
                                 }
@@ -146,8 +181,20 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
                               <div className="flex flex-col">
                                 <span>{product.name}</span>
                                 <span className="text-xs text-muted-foreground">
-                                  SKU: {product.sku || "N/A"} | Stock:{" "}
+                                  SKU: {product.sku ?? "N/A"} | Stock:{" "}
                                   {product.stockQty}
+                                  {(product.stockQty ?? 0) === 0 && (
+                                    <span className="ml-1 text-red-500">
+                                      · Out of stock
+                                    </span>
+                                  )}
+                                  {(product.stockQty ?? 0) > 0 &&
+                                    (product.stockQty ?? 0) <=
+                                      (product.reorderLevel ?? 10) && (
+                                      <span className="ml-1 text-amber-500">
+                                        · Low stock
+                                      </span>
+                                    )}
                                 </span>
                               </div>
                             </CommandItem>
@@ -157,7 +204,7 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
                     </Command>
                   </PopoverContent>
                 </Popover>
-                <FieldError errors={[form.formState.errors.productId]} />
+                {errors.productId && <FieldError errors={[errors.productId]} />}
               </Field>
 
               <div className="grid grid-cols-2 gap-4">
@@ -166,28 +213,56 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
                   <Input
                     id="quantity"
                     type="number"
+                    min="1"
                     {...form.register("quantity", { valueAsNumber: true })}
                     placeholder="1"
                   />
-                  <FieldError errors={[form.formState.errors.quantity]} />
+                  {errors.quantity && <FieldError errors={[errors.quantity]} />}
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="unitCost">Unit Cost (₹)</FieldLabel>
                   <Input
                     id="unitCost"
                     type="number"
+                    min="0"
                     step="0.01"
-                    {...form.register("unitCostPaise", { valueAsNumber: true })}
+                    {...form.register("unitCostRupees", {
+                      valueAsNumber: true,
+                    })}
                     placeholder="0.00"
                   />
-                  <FieldError errors={[form.formState.errors.unitCostPaise]} />
+                  {errors.unitCostRupees && (
+                    <FieldError errors={[errors.unitCostRupees]} />
+                  )}
                 </Field>
               </div>
+
+              {/* Live stock preview — only shown when a product is selected */}
+              {selectedProduct && (
+                <div className="space-y-1 rounded-lg bg-muted px-4 py-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Current stock</span>
+                    <span className="font-mono font-medium">
+                      {selectedProduct.stockQty} {selectedProduct.unit}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      After this purchase
+                    </span>
+                    <span className="font-mono font-medium text-green-600">
+                      {(selectedProduct.stockQty ?? 0) +
+                        (Number(form.watch("quantity")) || 0)}
+                      {selectedProduct.unit}
+                    </span>
+                  </div>
+                </div>
+              )}
             </FieldGroup>
           </CardContent>
         </Card>
 
-        {/* Purchase Info */}
+        {/* Purchase info */}
         <Card>
           <CardHeader>
             <CardTitle>Purchase Info</CardTitle>
@@ -202,7 +277,9 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
                   type="date"
                   {...form.register("purchaseDate")}
                 />
-                <FieldError errors={[form.formState.errors.purchaseDate]} />
+                {errors.purchaseDate && (
+                  <FieldError errors={[errors.purchaseDate]} />
+                )}
               </Field>
 
               <Field>
@@ -216,7 +293,7 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <Field>
-                  <FieldLabel htmlFor="batchNumber">Batch Number</FieldLabel>
+                  <FieldLabel htmlFor="batchNumber">Batch No.</FieldLabel>
                   <Input
                     id="batchNumber"
                     {...form.register("batchNumber")}
@@ -236,7 +313,7 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
           </CardContent>
         </Card>
 
-        {/* Additional Notes */}
+        {/* Notes */}
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Notes</CardTitle>
@@ -245,30 +322,24 @@ export function NewPurchaseForm({ products }: NewPurchaseFormProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <FieldGroup>
-              <Field>
-                <Textarea
-                  {...form.register("notes")}
-                  placeholder="e.g. Received in good condition, Paid via check..."
-                  rows={3}
-                />
-              </Field>
-            </FieldGroup>
+            <Textarea
+              {...form.register("notes")}
+              placeholder="e.g. Received in good condition, paid via cheque…"
+              rows={3}
+            />
           </CardContent>
         </Card>
       </div>
 
       <div className="flex justify-end gap-4">
-        <Link href="/purchases">
-          <Button variant="outline" type="button">
-            Cancel
-          </Button>
-        </Link>
+        <Button variant="outline" type="button" asChild>
+          <Link href="/purchases">Cancel</Link>
+        </Button>
         <Button type="submit" disabled={isPending || !selectedProductId}>
           {isPending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Recording...
+              <Spinner className="mr-2 h-4 w-4" />
+              Recording…
             </>
           ) : (
             "Record Purchase"
