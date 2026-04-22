@@ -10,14 +10,14 @@ import { useCartStore } from "@/components/providers/cart-store-provider";
 
 export default function SubmitButton() {
   const router = useRouter();
-  const {
-    items,
-    customerId,
-    paymentMethod,
-    discountPaise,
-    amountPaid,
-    clearCart,
-  } = useCartStore((s) => s);
+  // Granular selector — only re-renders when these fields change
+  const items = useCartStore((s) => s.items);
+  const customerId = useCartStore((s) => s.customerId);
+  const paymentMethod = useCartStore((s) => s.paymentMethod);
+  const discountPaise = useCartStore((s) => s.discountPaise);
+  const amountPaid = useCartStore((s) => s.amountPaid);
+  const clearCart = useCartStore((s) => s.clearCart);
+
   const [isPending, startTransition] = useTransition();
 
   const handleSubmitBill = (status: "paid" | "draft" = "paid") => {
@@ -30,7 +30,6 @@ export default function SubmitButton() {
       const toastId = toast.loading(
         status === "draft" ? "Saving draft..." : "Creating bill..."
       );
-
       try {
         const result = await createBillAction({
           customerId,
@@ -69,18 +68,20 @@ export default function SubmitButton() {
     });
   };
 
+  const isEmpty = items.length === 0;
+
   return (
     <div className="flex items-center gap-2">
       <Button
         variant="outline"
         onClick={() => handleSubmitBill("draft")}
-        disabled={items.length === 0 || isPending}
+        disabled={isEmpty || isPending}
       >
         Save Draft
       </Button>
       <Button
         onClick={() => handleSubmitBill("paid")}
-        disabled={items.length === 0 || isPending}
+        disabled={isEmpty || isPending}
       >
         {isPending ? (
           <>

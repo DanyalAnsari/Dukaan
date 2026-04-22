@@ -1,19 +1,18 @@
 "use client";
 
-import { type ColumnDef } from "@tanstack/react-table";
+import { FilterFn, Row, type ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 import { FileText } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTableColumnHeader } from "@/components/data-table";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { type Bill } from "@/types";
+import { BillStatus, type Bill } from "@/types";
+import { endOfDay, isWithinInterval, startOfDay } from "date-fns";
 
 // ---------------------------------------------------------------------------
 // Bill status helper
 // ---------------------------------------------------------------------------
-
-type BillStatus = "paid" | "credit" | "partial" | "draft";
 
 function getBillStatus(bill: Bill): BillStatus {
   return (bill.status as BillStatus) ?? "draft";
@@ -38,6 +37,34 @@ const statusConfig: Record<BillStatus, { label: string; className: string }> = {
   },
 };
 
+export const dateRangeFilterFn: FilterFn<BillWithCustomer> = (
+  row: Row<BillWithCustomer>,
+  columnId: string,
+  value: { from?: Date; to?: Date }
+) => {
+  const rawDate = row.getValue(columnId);
+  if (!rawDate) return true;
+
+  const date = new Date(rawDate as string);
+  const { from, to } = value;
+
+  // No filter set — show all
+  if (!from && !to) return true;
+
+  // Only from
+  if (from && !to) return date >= from;
+
+  // Only to
+  if (!from && to) return date <= to;
+
+  // Both — use interval check
+  return isWithinInterval(date, {
+    start: startOfDay(from!),
+    end: endOfDay(to!),
+  });
+};
+
+dateRangeFilterFn.autoRemove = (val) => !val || (!val.from && !val.to);
 // ---------------------------------------------------------------------------
 // Column factory
 // ---------------------------------------------------------------------------
@@ -79,6 +106,7 @@ export function getBillColumns(): ColumnDef<BillWithCustomer>[] {
         );
       },
       sortingFn: "datetime",
+      filterFn: dateRangeFilterFn,
     },
 
     // Customer
@@ -104,6 +132,31 @@ export function getBillColumns(): ColumnDef<BillWithCustomer>[] {
       cell: ({ row }) => (
         <div className="font-mono">
           {formatCurrency(row.original.totalPaise)}
+        </div>
+      ),
+    },
+
+    // Due Amount
+    {
+      accessorKey: "amountDuePaise",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Due" />
+      ),
+      cell: ({ row }) => (
+        <div className="font-mono">
+          {formatCurrency(row.original.amountDuePaise ?? 0)}
+        </div>
+      ),
+    },
+    // Paid Amount
+    {
+      accessorKey: "amountPaidPaise",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Paid" />
+      ),
+      cell: ({ row }) => (
+        <div className="font-mono">
+          {formatCurrency(row.original.amountPaidPaise ?? 0)}
         </div>
       ),
     },

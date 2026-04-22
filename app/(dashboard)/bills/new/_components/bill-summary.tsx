@@ -8,52 +8,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, Receipt, Smartphone, Wallet } from "lucide-react";
 import { useCartStore } from "@/components/providers/cart-store-provider";
-
-const paymentMethodConfig = {
-  cash: { icon: Wallet, label: "Cash" },
-  upi: { icon: Smartphone, label: "UPI" },
-  card: { icon: CreditCard, label: "Card" },
-  credit: { icon: Receipt, label: "Credit" },
-};
+import {
+  PAYMENT_METHODS,
+  paymentMethodConfig,
+} from "../_lib/payment-method-config";
 
 export default function BillSummary() {
-  const {
-    items,
-    paymentMethod,
-    setPaymentMethod,
-    amountPaid,
-    setAmountPaid,
-    discountPaise,
-    setDiscount,
-    customerId,
-  } = useCartStore((state) => state);
+  const items = useCartStore((s) => s.items);
+  const paymentMethod = useCartStore((s) => s.paymentMethod);
+  const amountPaid = useCartStore((s) => s.amountPaid);
+  const discountPaise = useCartStore((s) => s.discountPaise);
+  const customerId = useCartStore((s) => s.customerId);
+  const setPaymentMethod = useCartStore((s) => s.setPaymentMethod);
+  const setAmountPaid = useCartStore((s) => s.setAmountPaid);
+  const setDiscount = useCartStore((s) => s.setDiscount);
+
   const [discountInput, setDiscountInput] = useState("");
 
   const { subtotal, totalGst, total, balanceDue, changeDue } = useMemo(() => {
     const sub = getCartSubtotal(items);
     const gst = getCartTotalGst(items);
     const tot = sub + gst - discountPaise;
-    const balance = Math.max(0, tot - amountPaid);
-    const change = Math.max(0, amountPaid - tot);
     return {
       subtotal: sub,
       totalGst: gst,
       total: tot,
-      balanceDue: balance,
-      changeDue: change,
+      balanceDue: Math.max(0, tot - amountPaid),
+      changeDue: Math.max(0, amountPaid - tot),
     };
   }, [items, discountPaise, amountPaid]);
 
   const isPartialPayment =
     paymentMethod !== "credit" && amountPaid > 0 && amountPaid < total;
-  const isFullPayment = paymentMethod === "credit" || amountPaid >= total;
 
   const handleDiscountChange = (value: string) => {
     setDiscountInput(value);
-    const numValue = parseFloat(value) || 0;
-    setDiscount(Math.round(numValue * 100)); // Convert rupees to paise
+    setDiscount(Math.round((parseFloat(value) || 0) * 100));
   };
 
   return (
@@ -66,8 +57,8 @@ export default function BillSummary() {
         <div className="space-y-3">
           <Label>Payment Mode</Label>
           <div className="grid grid-cols-2 gap-2">
-            {(["cash", "upi", "card", "credit"] as const).map((mode) => {
-              const Icon = paymentMethodConfig[mode].icon;
+            {PAYMENT_METHODS.map((mode) => {
+              const { icon: Icon, label } = paymentMethodConfig[mode];
               return (
                 <Button
                   key={mode}
@@ -75,18 +66,12 @@ export default function BillSummary() {
                   disabled={mode === "credit" && !customerId}
                   onClick={() => {
                     setPaymentMethod(mode);
-                    if (mode !== "credit") {
-                      setAmountPaid(total);
-                    } else {
-                      setAmountPaid(0);
-                    }
+                    setAmountPaid(mode !== "credit" ? total : 0);
                   }}
                   className="h-auto flex-col gap-2 py-3"
                 >
                   <Icon className="h-5 w-5" />
-                  <span className="text-xs">
-                    {paymentMethodConfig[mode].label}
-                  </span>
+                  <span className="text-xs">{label}</span>
                 </Button>
               );
             })}
@@ -109,7 +94,7 @@ export default function BillSummary() {
           />
         </div>
 
-        {/* Amount Paid (for non-credit payments) */}
+        {/* Amount Paid */}
         {paymentMethod !== "credit" && (
           <div className="space-y-2">
             <Label htmlFor="amountPaid">Amount Received (₹)</Label>
@@ -161,7 +146,6 @@ export default function BillSummary() {
             <span className="font-mono">{formatCurrency(total)}</span>
           </div>
 
-          {/* Change Due */}
           {changeDue > 0 && (
             <div className="flex justify-between rounded-lg bg-green-50 p-3 text-green-700">
               <span className="font-medium">Change Due</span>
@@ -171,7 +155,6 @@ export default function BillSummary() {
             </div>
           )}
 
-          {/* Balance Due (for partial payments) */}
           {isPartialPayment && (
             <div className="flex justify-between rounded-lg bg-amber-50 p-3 text-amber-700">
               <span className="font-medium">Balance Due</span>

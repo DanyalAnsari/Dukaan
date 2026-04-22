@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/combobox";
 import { formatCurrency } from "@/lib/utils";
 import { AlertTriangle, Package } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface Product {
@@ -32,13 +32,13 @@ interface ProductComboboxProps {
 }
 
 export default function ProductCombobox({ products }: ProductComboboxProps) {
-  const { items, addItem } = useCartStore((s) => s);
+  const items = useCartStore((s) => s.items);
+  const addItem = useCartStore((s) => s.addItem);
   const [open, setOpen] = useState(false);
 
-  // Focus shortcut
-  useState(() => {
+  // ✅ Keyboard shortcut — must be useEffect, not useState
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Shortcut "/" to focus product search
       if (
         e.key === "/" &&
         (e.target as HTMLElement).tagName !== "INPUT" &&
@@ -47,7 +47,7 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
         e.preventDefault();
         const input = document.querySelector(
           'input[placeholder*="Search products"]'
-        ) as HTMLInputElement;
+        ) as HTMLInputElement | null;
         if (input) {
           input.focus();
         } else {
@@ -57,19 +57,18 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  });
+  }, []);
 
   const handleAddProduct = useCallback(
     (product: Product) => {
       const existingItem = items.find((i) => i.productId === product.id);
-      const currentQty = existingItem?.quantity || 0;
+      const currentQty = existingItem?.quantity ?? 0;
       const stockQty = product.stockQty ?? 999;
 
       if (stockQty === 0) {
         toast.error(`${product.name} is out of stock`);
         return;
       }
-
       if (currentQty >= stockQty) {
         toast.error(`Maximum stock reached for ${product.name}`);
         return;
@@ -81,11 +80,10 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
         productSku: product.sku,
         hsnCode: product.hsnCode,
         unitPricePaise: product.unitPricePaise,
-        gstRate: product.gstRate || 0,
+        gstRate: product.gstRate ?? 0,
         quantity: 1,
       });
 
-      // Low stock warning
       const newQty = currentQty + 1;
       if (stockQty <= 5 && newQty <= stockQty) {
         toast.warning(
@@ -95,7 +93,6 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
         toast.success(`${product.name} added to cart`);
       }
 
-      // Close dropdown after selection (Option A behavior)
       setOpen(false);
     },
     [addItem, items]
@@ -104,13 +101,9 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
   return (
     <Combobox
       items={products}
-      itemToStringValue={(item: Product) => `${item.name} ${item.sku || ""}`}
-      itemToStringLabel={(item: Product) => `${item.name} ${item.sku || ""}`}
-      onValueChange={(item) => {
-        if (item) {
-          handleAddProduct(item);
-        }
-      }}
+      itemToStringValue={(item: Product) => `${item.name} ${item.sku ?? ""}`}
+      itemToStringLabel={(item: Product) => `${item.name} ${item.sku ?? ""}`}
+      onValueChange={(item) => item && handleAddProduct(item)}
       open={open}
       onOpenChange={setOpen}
       autoHighlight
@@ -130,7 +123,7 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
           {(item) => {
             const product = item as Product;
             const existingItem = items.find((i) => i.productId === product.id);
-            const currentQty = existingItem?.quantity || 0;
+            const currentQty = existingItem?.quantity ?? 0;
             const stockQty = product.stockQty ?? 999;
             const isOutOfStock = stockQty === 0;
             const isAtMax = currentQty >= stockQty;
@@ -146,7 +139,7 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate font-medium">{product.name}</span>
                   <span className="font-mono text-xs text-muted-foreground">
-                    {product.sku || "No SKU"}
+                    {product.sku ?? "No SKU"}
                   </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
@@ -170,7 +163,7 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
                         </span>
                       ) : (
                         <>
-                          Stock: {stockQty} • GST {product.gstRate || 0}%
+                          Stock: {stockQty} • GST {product.gstRate ?? 0}%
                         </>
                       )}
                     </div>

@@ -3,9 +3,7 @@ import { db } from "@/database";
 import { bills } from "@/database/schemas";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import CTAbuttons from "./_components/CTA-buttons";
-import { getShopById, getShopByUserId } from "@/database/data/shop";
+import { getShopByUserId } from "@/database/data/shop";
 import { getSession } from "@/lib/get-session";
 import { and } from "drizzle-orm";
 import { Separator } from "@/components/ui/separator";
@@ -36,10 +34,10 @@ export default async function BillViewPage({ params }: PageProps) {
   const { id } = await params;
 
   const session = await getSession();
-  const userShop = (await getShopByUserId(session!.user.id))!;
+  const shop = (await getShopByUserId(session!.user.id))!;
 
   const bill = await db.query.bills.findFirst({
-    where: and(eq(bills.id, id), eq(bills.shopId, userShop.id)),
+    where: and(eq(bills.id, id), eq(bills.shopId, shop.id)),
     with: {
       items: true,
       customer: true,
@@ -48,21 +46,14 @@ export default async function BillViewPage({ params }: PageProps) {
 
   if (!bill) notFound();
 
-  const shop = await getShopById(bill.shopId);
-
-  if (!shop) notFound();
-
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex items-center justify-between print:hidden">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div>
-          <Link href="/bills">
-            <Button variant="link" size="sm">
-              ← Back to Bills
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold">Invoice {bill.invoiceNumber}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="font-heading text-2xl font-bold">
+            Invoice {bill.invoiceNumber}
+          </h1>
+          <p className="font-heading text-sm text-muted-foreground">
             {formatDate(new Date(bill.billDate))}
           </p>
         </div>
@@ -70,7 +61,7 @@ export default async function BillViewPage({ params }: PageProps) {
       </div>
 
       {/* Invoice Document */}
-      <Card className="space-y-4 p-6 print:border-0 print:p-0">
+      <Card className="mx-auto max-w-4xl space-y-4 p-6 print:border-0 print:p-0">
         {/* Shop Header */}
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold tracking-wide">
@@ -327,10 +318,10 @@ export default async function BillViewPage({ params }: PageProps) {
             <div>
               <div className="text-sm text-muted-foreground">Payment Mode</div>
               <div className="font-medium capitalize">
-                {bill.status === "credit" 
-                  ? "Credit (Udhar)" 
-                  : bill.status === "partial" 
-                    ? "Partial Payment" 
+                {bill.status === "credit"
+                  ? "Credit (Udhar)"
+                  : bill.status === "partial"
+                    ? "Partial Payment"
                     : "Fully Paid"}
               </div>
             </div>

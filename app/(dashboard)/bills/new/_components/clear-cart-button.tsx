@@ -28,7 +28,7 @@ export default function ClearCartButton() {
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button variant="outline" disabled={items.length === 0}>
-          <Trash2 className="mr-2 h-4 w-4" />
+          <Trash2 className="mr-2 size-4" />
           Clear Cart
         </Button>
       </AlertDialogTrigger>

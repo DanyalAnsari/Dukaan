@@ -108,7 +108,7 @@ export default function CustomerCombobox({ customers }: CustomerComboboxProps) {
                 </div>
                 {customer.outstandingBalancePaise !== null &&
                   customer.outstandingBalancePaise > 0 && (
-                    <StatusBadge variant="unpaid">
+                    <StatusBadge variant="credit">
                       {formatCurrency(customer.outstandingBalancePaise)}
                     </StatusBadge>
                   )}

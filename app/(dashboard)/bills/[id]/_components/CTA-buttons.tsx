@@ -32,40 +32,42 @@ export default function CTAbuttons({
   const isPaid = bill.status === "paid";
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-col gap-2 md:flex-row">
       {!isPaid && (
         <Button
           variant="default"
           className="bg-green-600 hover:bg-green-700"
           onClick={() => setPayDialogOpen(true)}
         >
-          <Banknote className="mr-2 h-4 w-4" />
+          <Banknote className="mr-2 size-4" />
           Record Payment
         </Button>
       )}
       <Button variant="outline" onClick={handlePrint}>
-        <Printer className="mr-2 h-4 w-4" />
+        <Printer className="mr-2 size-4" />
         Print
       </Button>
+
       <Button variant="outline" onClick={handleWhatsAppShare}>
-        <Share2 className="mr-2 h-4 w-4" />
+        <Share2 className="mr-2 size-4" />
         WhatsApp
       </Button>
-      <Link href={`/api/bills/${id}/pdf`} target="_blank">
-        <Button variant="secondary">
-          <FileText className="mr-2 h-4 w-4" />
+      <Button variant="outline" asChild>
+        <Link href={`/api/bills/${id}/pdf`} target="_blank">
+          <FileText className="mr-2 size-4" />
           PDF
-        </Button>
-      </Link>
-
-      <BillPaymentDialog
-        open={payDialogOpen}
-        onOpenChange={setPayDialogOpen}
-        billId={bill.id}
-        invoiceNumber={bill.invoiceNumber}
-        customerId={bill.customerId}
-        amountDue={bill.amountDuePaise || 0}
-      />
+        </Link>
+      </Button>
+      {!isPaid && (
+        <BillPaymentDialog
+          open={payDialogOpen}
+          onOpenChange={setPayDialogOpen}
+          billId={bill.id}
+          invoiceNumber={bill.invoiceNumber}
+          customerId={bill.customerId!}
+          amountDue={bill.amountDuePaise || 0}
+        />
+      )}
     </div>
   );
 }

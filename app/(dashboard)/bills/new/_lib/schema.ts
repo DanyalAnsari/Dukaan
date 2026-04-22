@@ -20,5 +20,4 @@ export const billSchema = z.object({
 });
 
 export type BillInput = z.input<typeof billSchema>;
-export type BillOutput = z.output<typeof billSchema>;
-export type BillSchema = z.infer<typeof billSchema>;
+export type BillSchema = z.output<typeof billSchema>;

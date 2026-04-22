@@ -1,8 +1,8 @@
 "use client";
 
+import { useCartStore } from "@/components/providers/cart-store-provider";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useCartStore } from "@/stores/cartStore";
 import { CreditCard, Receipt, Smartphone, Wallet } from "lucide-react";
 
 const paymentMethodConfig = {
@@ -13,7 +13,7 @@ const paymentMethodConfig = {
 };
 
 export default function PaymentModeSelector() {
-  const { paymentMethod, setPaymentMethod } = useCartStore();
+  const { paymentMethod, setPaymentMethod } = useCartStore((s) => s);
   return (
     <div className="space-y-3">
       <Label>Payment Mode</Label>

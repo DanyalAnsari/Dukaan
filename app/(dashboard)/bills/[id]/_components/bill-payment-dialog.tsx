@@ -16,17 +16,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { recordPaymentAction } from "@/app/(dashboard)/_actions/payment";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Loader2 } from "lucide-react";
+import { resolveBillPaymentAction } from "../_lib/action";
 
 interface BillPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   billId: string;
   invoiceNumber: string;
-  customerId?: string | null;
+  customerId: string;
   amountDue: number; // in paise
 }
 
@@ -62,7 +73,7 @@ export function BillPaymentDialog({
     setValue,
     control,
     formState: { errors },
-  } = useForm<FormInput, any, FormOutput>({
+  } = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       amount: maxAmount,
@@ -74,19 +85,28 @@ export function BillPaymentDialog({
 
   const onSubmit = (values: FormOutput) => {
     startTransition(async () => {
-      const result = await recordPaymentAction({
-        customerId,
-        billId,
-        amountPaise: values.amount * 100,
-        paymentMethod: values.paymentMethod,
-        notes: `Payment for Invoice ${invoiceNumber}`,
-      });
+      const toastId = toast.loading("resolving bill payment...");
+      try {
+        const result = await resolveBillPaymentAction({
+          customerId,
+          billId,
+          amountPaise: values.amount * 100,
+          paymentMethod: values.paymentMethod,
+          notes: `Payment for Invoice ${invoiceNumber}`,
+        });
 
-      if (result.success) {
-        toast.success("Payment recorded successfully");
-        onOpenChange(false);
-      } else {
-        toast.error(result.error || "Failed to record payment");
+        if (result.success) {
+          toast.success("Payment recorded successfully", { id: toastId });
+          onOpenChange(false);
+        } else {
+          toast.error(result.message || "Failed to record payment", {
+            description: result.errors?.map((e) => `• ${e.message}`).join("\n"),
+            id: toastId,
+          });
+        }
+      } catch (error) {
+        console.error("Error resolving Payment:", error);
+        toast.error("An unexpected error occurred", { id: toastId });
       }
     });
   };
@@ -100,70 +120,81 @@ export function BillPaymentDialog({
             Enter the amount received for this specific invoice.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Card className="border-0 shadow-none">
-            <CardContent className="space-y-4 pt-4">
-              <div className="rounded-lg bg-muted p-4 text-center">
-                <div className="text-sm text-muted-foreground">Balance Due</div>
-                <div className="font-mono text-2xl font-bold text-red-600">
-                  {formatCurrency(amountDue)}
-                </div>
-              </div>
+        <Card className="border-0 shadow-none">
+          <CardHeader className="bg-unpaid rounded-lg p-4 pt-4 text-center">
+            <CardTitle className="text-sm text-muted-foreground">
+              Balance Due
+            </CardTitle>
+            <CardDescription className="text-unpaid font-mono text-2xl font-bold">
+              {formatCurrency(amountDue)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 py-4">
+            <form onSubmit={handleSubmit(onSubmit)} id="bill-payment-form">
+              <FieldGroup>
+                <Field data-invalid={!!errors.amount}>
+                  <FieldLabel htmlFor="amount">Amount (₹)</FieldLabel>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={maxAmount}
+                    placeholder="0.00"
+                    disabled={isPending}
+                    aria-invalid={!!errors.amount}
+                    {...register("amount")}
+                  />
+                  {errors.amount && <FieldError errors={[errors.amount]} />}
+                </Field>
 
-              <Field data-invalid={!!errors.amount}>
-                <FieldLabel htmlFor="amount">Amount (₹)</FieldLabel>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max={maxAmount}
-                  placeholder="0.00"
-                  disabled={isPending}
-                  aria-invalid={!!errors.amount}
-                  {...register("amount")}
-                />
-                {errors.amount && <FieldError errors={[errors.amount]} />}
-              </Field>
-
-              <Field data-invalid={!!errors.paymentMethod}>
-                <FieldLabel>Payment Method</FieldLabel>
-                <div className="grid grid-cols-3 gap-2">
-                  {["cash", "upi", "card"].map((method) => (
-                    <Button
-                      key={method}
-                      type="button"
-                      variant={
-                        paymentMethod === method ? "default" : "secondary"
-                      }
-                      onClick={() =>
-                        setValue("paymentMethod", method, {
-                          shouldValidate: true,
-                        })
-                      }
-                      disabled={isPending}
-                      className="capitalize"
-                    >
-                      {method}
-                    </Button>
-                  ))}
-                </div>
-                {errors.paymentMethod && (
-                  <FieldError errors={[errors.paymentMethod]} />
-                )}
-              </Field>
-            </CardContent>
-          </Card>
-          <DialogFooter className="mt-4">
+                <Field data-invalid={!!errors.paymentMethod}>
+                  <FieldLabel>Payment Method</FieldLabel>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["cash", "upi", "card"].map((method) => (
+                      <Button
+                        key={method}
+                        type="button"
+                        variant={
+                          paymentMethod === method ? "default" : "secondary"
+                        }
+                        onClick={() =>
+                          setValue("paymentMethod", method, {
+                            shouldValidate: true,
+                          })
+                        }
+                        disabled={isPending}
+                        className="capitalize"
+                      >
+                        {method}
+                      </Button>
+                    ))}
+                  </div>
+                  {errors.paymentMethod && (
+                    <FieldError errors={[errors.paymentMethod]} />
+                  )}
+                </Field>
+              </FieldGroup>
+            </form>
+          </CardContent>
+        </Card>
+        <DialogFooter className="mt-4">
+          <Field orientation="horizontal">
             <Button
               type="button"
+              key="cancel-button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button
+              type="submit"
+              key="submit-button"
+              form="bill-payment-form"
+              disabled={isPending}
+            >
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -173,8 +204,8 @@ export function BillPaymentDialog({
                 "Pay Invoice"
               )}
             </Button>
-          </DialogFooter>
-        </form>
+          </Field>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
