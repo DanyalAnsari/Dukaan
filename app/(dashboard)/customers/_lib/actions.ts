@@ -53,7 +53,7 @@ export async function updateCustomerAction(
     revalidatePath(`${CUSTOMERS_PATH}/${customerId}`);
     refresh();
 
-    return { success: true, message: "Customer updated successfully" };
+    return { success: true};
   } catch (error) {
     console.error("[updateCustomer]", error);
     return {
@@ -99,7 +99,7 @@ export async function createCustomerAction(
     revalidatePath(CUSTOMERS_PATH);
     refresh();
 
-    return { success: true, message: "Customer created successfully" };
+    return { success: true };
   } catch (error) {
     console.error("[createCustomer]", error);
     return {

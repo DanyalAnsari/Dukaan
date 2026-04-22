@@ -3,7 +3,6 @@
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,47 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { recordPaymentAction } from "../_lib/action";
-
-// ─── Schema factory ───────────────────────────────────────────────────────────
-// Defined outside the component — stable across renders, safe for React Compiler.
-// Accepts maxAmountRupees so the .max() message can show the formatted value.
-
-function buildPaymentSchema(maxAmountRupees: number) {
-  return z.object({
-    amount: z.coerce
-      .number()
-      .positive("Amount must be greater than 0")
-      .max(
-        maxAmountRupees,
-        `Cannot exceed outstanding balance (${formatCurrency(maxAmountRupees * 100)})`
-      ),
-    // Mirrors the DB paymentMethodEnum — no free-form strings accepted
-    paymentMethod: z.enum(["cash", "upi", "card", "bank"]),
-  });
-}
-
-// ─── Types derived from the schema, not written by hand ───────────────────────
-//
-// Previously FormInput was manually typed as:
-//   { amount: number | undefined; paymentMethod: string }
-//
-// That made paymentMethod a bare `string`, which conflicts with the resolver's
-// enum constraint and produces the TS error. Deriving from z.input<> gives:
-//   { amount: unknown; paymentMethod: "cash" | "upi" | "card" | "bank" }
-//
-// `amount` becomes `unknown` because z.coerce.number() accepts anything the
-// HTML input emits (string, number, undefined) — RHF + zod handle coercion.
-// `paymentMethod` becomes the exact literal union the resolver expects.
-
-type BaseSchema = ReturnType<typeof buildPaymentSchema>;
-type FormInput = z.input<BaseSchema>; // { amount: unknown; paymentMethod: "cash" | "upi" | "card" | "bank" }
-type FormOutput = z.output<BaseSchema>; // { amount: number;  paymentMethod: "cash" | "upi" | "card" | "bank" }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PAYMENT_METHODS = ["cash", "upi", "card", "bank"] as const;
-
-// ─── Props ────────────────────────────────────────────────────────────────────
+import { PAYMENT_METHODS } from "@/constants";
+import { buildPaymentSchema, FormInput, FormOutput } from "../_lib/schema";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -97,7 +57,7 @@ export function PaymentDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       amount: undefined,
-      paymentMethod: "cash", // "cash" satisfies the enum literal union
+      paymentMethod: "cash",
     },
   });
 

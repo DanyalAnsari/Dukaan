@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/field";
 import { Loader2 } from "lucide-react";
 import { resolveBillPaymentAction } from "../_lib/action";
+import { PAYMENT_METHODS } from "@/constants";
 
 interface BillPaymentDialogProps {
   open: boolean;
@@ -61,7 +62,7 @@ export function BillPaymentDialog({
         maxAmount,
         `Amount cannot exceed balance due (${formatCurrency(amountDue)})`
       ),
-    paymentMethod: z.string().min(1),
+    paymentMethod: z.enum(PAYMENT_METHODS),
   });
 
   type FormInput = z.input<typeof formSchema>;
@@ -151,7 +152,7 @@ export function BillPaymentDialog({
                 <Field data-invalid={!!errors.paymentMethod}>
                   <FieldLabel>Payment Method</FieldLabel>
                   <div className="grid grid-cols-3 gap-2">
-                    {["cash", "upi", "card"].map((method) => (
+                    {PAYMENT_METHODS.map((method) => (
                       <Button
                         key={method}
                         type="button"

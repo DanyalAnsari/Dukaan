@@ -39,16 +39,17 @@ export default function CreateCustomerDialog() {
   });
 
   function onSubmit(data: CustomerOutput) {
+    const toastId = toast.loading("Adding customer...");
     startTransition(async () => {
       // Pass raw input — action runs safeParse server-side
       const result = await createCustomerAction(data);
 
       if (result.success) {
-        toast.success(result.message);
+        toast.success("Customer added successfully", { id: toastId });
         setOpen(false);
         form.reset();
       } else {
-        toast.error(result.message ?? "Something went wrong");
+        toast.error(result.message ?? "Something went wrong", { id: toastId });
       }
     });
   }

@@ -1,5 +1,6 @@
 "use server";
 
+import { PAYMENT_METHODS } from "@/constants";
 import { db } from "@/database";
 import { payments, customers, bills } from "@/database/schemas";
 import { requireShop } from "@/lib/require-shop";
@@ -15,7 +16,7 @@ const paymentSchema = z.object({
     .number()
     .int("Amount must be a whole number")
     .positive("Amount must be > 0"),
-  paymentMethod: z.enum(["cash", "upi", "card", "bank"]),
+  paymentMethod: z.enum(PAYMENT_METHODS),
   notes: z.string().optional().nullable(),
 });
 
@@ -154,7 +155,7 @@ export async function recordPaymentAction(
     revalidatePath("/customers");
     refresh(); // Next.js 16 — syncs the client router
 
-    return { success: true, message: "Payment recorded successfully" };
+    return { success: true };
   } catch (error) {
     console.error("[recordPayment]", error);
     return {

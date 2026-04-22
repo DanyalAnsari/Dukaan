@@ -8,13 +8,16 @@ import { getShopByUserId } from "@/database/data/shop";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { PAYMENT_METHODS } from "@/constants";
 
 const paymentSchema = z.object({
-  customerId: z.string(),
-  billId: z.string(),
-  amountPaise: z.number().positive(),
-  paymentMethod: z.string(),
-  referenceNumber: z.string().optional().nullable(),
+  customerId: z.uuid("Invalid customer ID"),
+  billId: z.uuid("Invalid bill ID"),
+  amountPaise: z
+    .number()
+    .int("Amount must be a whole number")
+    .positive("Amount must be > 0"),
+  paymentMethod: z.enum(PAYMENT_METHODS),
   notes: z.string().optional().nullable(),
 });
 

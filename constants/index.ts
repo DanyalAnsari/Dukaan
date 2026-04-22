@@ -36,3 +36,5 @@ export const GST_RATE_OPTIONS = [
   { value: "18", label: "18%" },
   { value: "28", label: "28%" },
 ] as const;
+
+export const PAYMENT_METHODS = ["cash", "upi", "card"] as const;

@@ -51,7 +51,7 @@ export async function createProductAction(
     revalidatePath(PRODUCT_LIST_PATH);
     refresh(); // ← Next 16: syncs client router
 
-    return { success: true, message: "Product created successfully" };
+    return { success: true};
   } catch (error) {
     console.error("[createProduct]", error);
     return {
@@ -89,7 +89,7 @@ export async function updateProductAction(
     revalidatePath(`/products/${productId}/edit`);
     refresh();
 
-    return { success: true, message: "Product updated successfully" };
+    return { success: true};
   } catch (error) {
     console.error("[updateProduct]", error);
     return {
@@ -115,7 +115,7 @@ export async function deleteProductAction(
     revalidatePath(PRODUCT_LIST_PATH);
     refresh();
 
-    return { success: true, message: "Product deleted" };
+    return { success: true };
   } catch (error) {
     console.error("[deleteProduct]", error);
     return { success: false, message: "Failed to delete product." };

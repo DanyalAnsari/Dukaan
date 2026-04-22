@@ -1,6 +1,6 @@
 "use client";
 
-import { type Bill } from "@/types";
+import { BillStatus, type Bill } from "@/types";
 import {
   DataTable,
   DataTableFacetedFilter,

@@ -17,6 +17,7 @@ export const billStatusEnum = pgEnum("bill_status", [
   "paid",
   "credit",
   "partial",
+  "draft",
 ]);
 export const paymentMethodEnum = pgEnum("payment_method", [
   "cash",
@@ -133,7 +134,7 @@ export const bills = pgTable(
     discountPaise: integer("discount_paise").default(0).notNull(),
     gstTotalPaise: integer("gst_total_paise").notNull(),
     totalPaise: integer("total_paise").notNull(),
-    status: billStatusEnum("status").default("paid").notNull(),
+    status: billStatusEnum("status").default("draft").notNull(),
     paymentMethod: paymentMethodEnum("payment_method")
       .default("cash")
       .notNull(),

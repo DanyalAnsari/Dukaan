@@ -8,6 +8,13 @@
       "when": 1776867395109,
       "tag": "0000_superb_tomorrow_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776876487914,
+      "tag": "0001_bouncy_paibok",
+      "breakpoints": true
     }
   ]
 }
