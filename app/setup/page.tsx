@@ -163,13 +163,7 @@ export default function SetupPage() {
     const toastId = toast.loading("Setting up your shop...");
 
     try {
-      const formData = new FormData();
-
-      for (const [key, value] of Object.entries(data)) {
-        formData.append(key, String(value ?? ""));
-      }
-
-      const result = await setupShopAction(formData);
+      const result = await setupShopAction(data);
 
       if (result?.success) {
         toast.success("Shop created! Welcome to Dukaan.", { id: toastId });

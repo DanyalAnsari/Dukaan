@@ -7,6 +7,7 @@ interface StatsCardProps {
   contentClassName?: string;
   stat: number | string | React.ReactElement;
   icon?: LucideIcon;
+  iconClass?: string;
   description?: string;
   trend?: {
     value: number;
@@ -19,6 +20,7 @@ export default function StatsCard({
   contentClassName,
   stat,
   icon: Icon,
+  iconClass = "",
   description,
   trend,
 }: StatsCardProps) {
@@ -29,29 +31,40 @@ export default function StatsCard({
           {title}
         </CardTitle>
         {Icon && (
-          <div className="rounded-lg bg-primary/10 p-2 text-primary">
+          <div
+            className={cn(
+              "rounded-lg bg-primary/10 p-2 text-primary",
+              iconClass
+            )}
+          >
             <Icon className="size-4" />
           </div>
         )}
       </CardHeader>
       <CardContent className="pb-6">
-        <div className={cn("text-xl sm:text-2xl font-bold tracking-tight", contentClassName)}>
+        <div
+          className={cn(
+            "text-xl font-bold tracking-tight sm:text-2xl",
+            contentClassName
+          )}
+        >
           {stat}
         </div>
         {(description || trend) && (
           <div className="mt-1 flex items-center gap-2">
             {trend && (
-              <span className={cn(
-                "text-xs font-medium",
-                trend.isUp ? "text-emerald-500" : "text-rose-500"
-              )}>
-                {trend.isUp ? "+" : "-"}{trend.value}%
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  trend.isUp ? "text-emerald-500" : "text-rose-500"
+                )}
+              >
+                {trend.isUp ? "+" : "-"}
+                {trend.value}%
               </span>
             )}
             {description && (
-              <p className="text-xs text-muted-foreground">
-                {description}
-              </p>
+              <p className="text-xs text-muted-foreground">{description}</p>
             )}
           </div>
         )}

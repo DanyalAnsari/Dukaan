@@ -103,7 +103,7 @@ export default async function DashboardPage() {
     },
     {
       title: "Pending Udhar",
-      className: `font-mono ${totalPendingUdhar > 0 ? "text-rose-600" : ""}`,
+      className: `font-mono ${totalPendingUdhar > 0 ? "text-unpaid" : ""}`,
       stat: formatCurrency(totalPendingUdhar),
       icon: Users,
       description: "Total outstanding",
@@ -144,9 +144,9 @@ export default async function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {stats.map((item, idx) => (
+        {stats.map((item) => (
           <StatsCard
-            key={idx}
+            key={item.title}
             title={item.title}
             stat={item.stat}
             icon={item.icon}

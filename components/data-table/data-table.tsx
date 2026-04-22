@@ -70,6 +70,7 @@ interface DataTableProps<TData, TValue> {
 
   /** Initial sorting state for the table */
   initialSorting?: SortingState;
+  initialColumnFilters?: ColumnFiltersState;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,11 +87,11 @@ export function DataTable<TData, TValue>({
   emptyMessage = "No results.",
   showRowSelection = false,
   initialSorting = [],
+  initialColumnFilters = [],
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
+  const [columnFilters, setColumnFilters] =
+    React.useState<ColumnFiltersState>(initialColumnFilters);
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
@@ -122,12 +123,12 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div className="space-y-4">
+    <Card className="flex-col space-y-4 border-none bg-transparent px-0 shadow-none">
       {/* Toolbar — composed by the consumer */}
       {toolbar?.(table)}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-md border">
+      <CardContent className="overflow-hidden rounded-md border p-0">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -175,11 +176,12 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
         </Table>
-      </div>
+      </CardContent>
 
       {/* Footer: selection count + pagination */}
+
       <DataTableFooter table={table} showRowSelection={showRowSelection} />
-    </div>
+    </Card>
   );
 }
 
@@ -201,6 +203,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
+import { Card, CardContent, CardFooter } from "../ui/card";
 
 interface DataTableFooterProps<TData> {
   table: TanStackTable<TData>;
@@ -212,9 +215,9 @@ function DataTableFooter<TData>({
   showRowSelection,
 }: DataTableFooterProps<TData>) {
   return (
-    <div className="flex items-center justify-between">
+    <CardFooter className="flex-wrap items-center justify-between gap-4 p-0">
       {/* Selection count */}
-      <div className="flex-1 text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground sm:text-sm">
         {showRowSelection ? (
           <>
             {table.getFilteredSelectedRowModel().rows.length} of{" "}
@@ -293,6 +296,6 @@ function DataTableFooter<TData>({
           </Button>
         </div>
       </div>
-    </div>
+    </CardFooter>
   );
 }

@@ -5,37 +5,38 @@ import { cache } from "react";
 import { bills } from "../schemas";
 import { subDays } from "date-fns";
 
-export const getTodaysBills = async (shopId: string) => {
+export const getTodaysBills = cache(async (shopId: string) => {
   const today = startOfToday();
   return await db.query.bills.findMany({
     where: (bills, { and, eq, gte }) =>
       and(eq(bills.shopId, shopId), gte(bills.billDate, today)),
     orderBy: (bills, { desc }) => [desc(bills.billDate)],
   });
-};
+});
 
 export const getAllBills = cache(
-  async (
-    shopId: string,
-    filters?: { status?: string; startDate?: Date; endDate?: Date }
-  ) =>
+  async (shopId: string) =>
     await db.query.bills.findMany({
-      where: (bills, { and, eq, gte, lte }) => {
-        const conditions = [eq(bills.shopId, shopId)];
-        if (filters?.status && filters.status !== "all") {
-          conditions.push(eq(bills.status, filters.status));
-        }
-        if (filters?.startDate) {
-          conditions.push(gte(bills.billDate, filters.startDate));
-        }
-        if (filters?.endDate) {
-          conditions.push(lte(bills.billDate, filters.endDate));
-        }
-        return and(...conditions);
-      },
+      where: (bills) => eq(bills.shopId, shopId),
       with: { customer: { columns: { name: true } } },
       orderBy: (bills, { desc }) => [desc(bills.billDate)],
     })
+);
+
+export const getBillsStat = cache((shopId: string) =>
+  db
+    .select({
+      totalBills: sql<number>`COUNT(*)`.mapWith(Number),
+      totalAmount: sql<number>`COALESCE(SUM(total_paise), 0)`.mapWith(Number),
+      paidAmount: sql<number>`COALESCE(SUM(amount_paid_paise), 0)`.mapWith(
+        Number
+      ),
+      pendingAmount: sql<number>`COALESCE(SUM(amount_due_paise), 0)`.mapWith(
+        Number
+      ),
+    })
+    .from(bills)
+    .where(eq(bills.shopId, shopId))
 );
 
 // For SalesChart — groups by day only

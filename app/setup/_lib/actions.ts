@@ -4,19 +4,17 @@ import { redirect } from "next/navigation";
 import { db } from "@/database";
 import { shops } from "@/database/schemas/business";
 import { getSession } from "@/lib/get-session";
-import { setupFormSchema } from "./schema";
-import { revalidatePath } from "next/cache";
+import { SetupFormOutput, setupFormSchema } from "./schema";
+import { refresh, revalidatePath } from "next/cache";
+import { ActionResult } from "@/types";
 
 export async function setupShopAction(
-  // prevState: ActionState,
-  formData: FormData
-) {
+  data: SetupFormOutput
+): Promise<ActionResult> {
   const session = await getSession();
   if (!session?.user) redirect("/login");
 
-  const values = Object.fromEntries(formData.entries());
-  
-  const result = setupFormSchema.safeParse(values);
+  const result = setupFormSchema.safeParse(data);
 
   if (!result.success) {
     return {
@@ -29,11 +27,10 @@ export async function setupShopAction(
     };
   }
 
-  const { name, phone, gstin, pan, upiId, invoicePrefix, address } = result.data;
-
-  await db
-    .insert(shops)
-    .values({
+  const { name, phone, gstin, pan, upiId, invoicePrefix, address } =
+    result.data;
+  try {
+    await db.insert(shops).values({
       name,
       ownerId: session.user.id,
       phone: phone || null,
@@ -43,24 +40,16 @@ export async function setupShopAction(
       invoicePrefix,
       address: address || null,
       nextInvoiceNumber: 1, // Start with 1
-    })
-    .returning();
+    });
 
-  revalidatePath("/");
-  return {
-    success: true,
-    message: "Form submitted successfully!",
-    errors: [],
-  };
+    revalidatePath("/");
+    refresh();
+    return { success: true };
+  } catch (error) {
+    console.error("[shopSetup]", error);
+    return {
+      success: false,
+      message: "Error settinng up shop!",
+    };
+  }
 }
-
-/* 
-type ActionState = {
-  success: boolean | null;
-  message: string | null;
-  errors: {
-    field: PropertyKey;
-    message: string;
-  }[];
-} | null;
- */

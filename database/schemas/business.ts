@@ -1,40 +1,57 @@
 import {
   pgTable,
+  pgEnum,
   text,
   timestamp,
   boolean,
   integer,
+  uniqueIndex,
   index,
   uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
-// Shops - each user belongs to a shop
+// ─── Enums ────────────────────────────────────────────────────────────────────
+// Drizzle pgEnum → type-safe column + Postgres CHECK constraint in one shot
+export const billStatusEnum = pgEnum("bill_status", [
+  "paid",
+  "credit",
+  "partial",
+]);
+export const paymentMethodEnum = pgEnum("payment_method", [
+  "cash",
+  "upi",
+  "card",
+  "bank",
+  "credit",
+]);
+
+// ─── Shops ────────────────────────────────────────────────────────────────────
 export const shops = pgTable(
   "shops",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    name: text("name").notNull(), //shop name
+    name: text("name").notNull(),
     ownerId: uuid("owner_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }), // references auth user
-    address: text("address"), //shop address
-    phone: text("phone"), //shop's /Owenr phone number
-    gstin: text("gstin"), // GSTIN number
-    pan: text("pan"), // PAN number
-    upiId: text("upi_id"), // UPI ID for payments
-    invoicePrefix: text("invoice_prefix").default("INV"),
-    nextInvoiceNumber: integer("next_invoice_number").default(1), //for fast lookup while creating new invoice
+      .references(() => user.id, { onDelete: "cascade" }),
+    address: text("address"),
+    phone: text("phone"),
+    gstin: text("gstin"),
+    pan: text("pan"),
+    upiId: text("upi_id"),
+    invoicePrefix: text("invoice_prefix").default("INV").notNull(),
+    nextInvoiceNumber: integer("next_invoice_number").default(1).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("shop_ownerId_idx").on(table.ownerId)]
+  (t) => [index("shop_owner_idx").on(t.ownerId)]
 );
 
-// Products
+// ─── Products ─────────────────────────────────────────────────────────────────
 export const products = pgTable(
   "products",
   {
@@ -42,32 +59,34 @@ export const products = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id, { onDelete: "cascade" }),
-    name: text("name").notNull(), //product name
-    category: text("category").default("Uncategorized"), //product category for grouping same kind of product
-    sku: text("sku"), //product internal code set by owner
-    barcode: text("barcode"), //product internal code set by owner
+    name: text("name").notNull(),
+    category: text("category").default("Uncategorized").notNull(),
+    sku: text("sku"),
+    barcode: text("barcode"),
     hsnCode: text("hsn_code"),
-    unit: text("unit").default("pcs"), // pcs, kg, liter, etc.
-    unitPricePaise: integer("unit_price_paise").notNull(), // price per unit in paise
-    mrpPaise: integer("mrp_paise"), // MRP in paise
-    gstRate: integer("gst_rate").default(18), // 0, 5, 12, 18, 28
-    stockQty: integer("stock_qty").default(0),
-    reorderLevel: integer("reorder_level").default(10), //notify when low stock needs re ordering
-    isActive: boolean("is_active").default(true).notNull(), // soft delete
+    unit: text("unit").default("pcs").notNull(),
+    unitPricePaise: integer("unit_price_paise").notNull(),
+    mrpPaise: integer("mrp_paise"),
+    gstRate: integer("gst_rate").default(18).notNull(),
+    stockQty: integer("stock_qty").default(0).notNull(),
+    reorderLevel: integer("reorder_level").default(10).notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [
-    index("product_shopId_idx").on(table.shopId),
-    index("product_sku_idx").on(table.sku),
-    index("product_barcode_idx").on(table.barcode),
+  (t) => [
+    index("product_shop_idx").on(t.shopId),
+    index("product_sku_idx").on(t.sku),
+    index("product_barcode_idx").on(t.barcode),
+    // Partial index — only index active products for fast lookup
+    index("product_active_shop_idx").on(t.shopId, t.isActive),
   ]
 );
 
-// Customers
+// ─── Customers ────────────────────────────────────────────────────────────────
 export const customers = pgTable(
   "customers",
   {
@@ -75,26 +94,28 @@ export const customers = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id, { onDelete: "cascade" }),
-    name: text("name").notNull(), // customer name
-    phone: text("phone"), // customer phone number
-    email: text("email"), // customer email address
-    address: text("address"), // customer address
-    outstandingBalancePaise: integer("outstanding_balance_paise").default(0), // total outstanding balance
-    creditLimitPaise: integer("credit_limit_paise"), // optional limit
-    isActive: boolean("is_active").default(true).notNull(), // soft delete
+    name: text("name").notNull(),
+    phone: text("phone"),
+    email: text("email"),
+    address: text("address"),
+    outstandingBalancePaise: integer("outstanding_balance_paise")
+      .default(0)
+      .notNull(),
+    creditLimitPaise: integer("credit_limit_paise"),
+    isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [
-    index("customer_shopId_idx").on(table.shopId),
-    index("customer_phone_idx").on(table.phone),
+  (t) => [
+    index("customer_shop_idx").on(t.shopId),
+    index("customer_phone_idx").on(t.phone),
   ]
 );
 
-// Bills
+// ─── Bills ────────────────────────────────────────────────────────────────────
 export const bills = pgTable(
   "bills",
   {
@@ -102,79 +123,92 @@ export const bills = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id, { onDelete: "cascade" }),
-    invoiceNumber: text("invoice_number").notNull(), // unique invoice number for shop can be created by referencing shop.nextinvoicenumber + invoiceprefix
-    customerId: uuid("customer_id").references(() => customers.id),
-    billDate: timestamp("bill_date").defaultNow().notNull(), // date of the bill
-    subtotalPaise: integer("subtotal_paise").notNull(), // sum of all bill items before discount and gst
-    discountPaise: integer("discount_paise").default(0), // discount amount in paise
-    gstTotalPaise: integer("gst_total_paise").notNull(), // total gst amount in paise
-    totalPaise: integer("total_paise").notNull(), // total amount after discount and gst
-    status: text("status").default("paid"), // paid, credit, partial
-    paymentMethod: text("payment_method").default("cash"), // cash, upi, card, credit
-    amountPaidPaise: integer("amount_paid_paise").default(0), //paid amount in paise
-    amountDuePaise: integer("amount_due_paise").default(0), //amount due in paise
+    // Unique per shop — enforced at DB level, not just app level
+    invoiceNumber: text("invoice_number").notNull(),
+    customerId: uuid("customer_id").references(() => customers.id, {
+      onDelete: "set null",
+    }),
+    billDate: timestamp("bill_date").defaultNow().notNull(),
+    subtotalPaise: integer("subtotal_paise").notNull(),
+    discountPaise: integer("discount_paise").default(0).notNull(),
+    gstTotalPaise: integer("gst_total_paise").notNull(),
+    totalPaise: integer("total_paise").notNull(),
+    status: billStatusEnum("status").default("paid").notNull(),
+    paymentMethod: paymentMethodEnum("payment_method")
+      .default("cash")
+      .notNull(),
+    amountPaidPaise: integer("amount_paid_paise").default(0).notNull(),
+    amountDuePaise: integer("amount_due_paise").default(0).notNull(),
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [
-    index("bill_shopId_idx").on(table.shopId),
-    index("bill_invoiceNumber_idx").on(table.invoiceNumber),
-    index("bill_customerId_idx").on(table.customerId),
-    index("bill_billDate_idx").on(table.billDate),
+  (t) => [
+    // Composite unique — invoice numbers unique within a shop
+    uniqueIndex("bill_shop_invoice_unique_idx").on(t.shopId, t.invoiceNumber),
+    index("bill_shop_idx").on(t.shopId),
+    index("bill_customer_idx").on(t.customerId),
+    index("bill_date_idx").on(t.billDate),
   ]
 );
 
-// Bill Items - snapshots product info at time of sale
+// ─── Bill Items ───────────────────────────────────────────────────────────────
 export const billItems = pgTable(
-  "billItems",
+  "bill_items", // snake_case table name for consistency
   {
     id: uuid("id").primaryKey().defaultRandom(),
     billId: uuid("bill_id")
       .notNull()
       .references(() => bills.id, { onDelete: "cascade" }),
-    productId: uuid("product_id").references(() => products.id),
-    productName: text("product_name").notNull(), // snapshot
-    productSku: text("product_sku"), // snapshot
+    productId: uuid("product_id").references(() => products.id, {
+      onDelete: "set null",
+    }),
+    // Snapshot columns — intentionally denormalised
+    productName: text("product_name").notNull(),
+    productSku: text("product_sku"),
     unit: text("unit").notNull(),
     quantity: integer("quantity").notNull(),
-    unitPricePaise: integer("unit_price_paise").notNull(), // snapshot
-    gstRate: integer("gst_rate").notNull(), // snapshot
-    hsnCode: text("hsn_code"), // snapshot
-    gstAmountPaise: integer("gst_amount_paise").notNull(), // gst amount in paise
-    lineTotalPaise: integer("line_total_paise").notNull(), // total amount of this bill item in paise (price + gst)
+    unitPricePaise: integer("unit_price_paise").notNull(),
+    gstRate: integer("gst_rate").notNull(),
+    hsnCode: text("hsn_code"),
+    gstAmountPaise: integer("gst_amount_paise").notNull(),
+    lineTotalPaise: integer("line_total_paise").notNull(),
   },
-  (table) => [
-    index("billItem_billId_idx").on(table.billId),
-    index("billItem_productId_idx").on(table.productId),
+  (t) => [
+    index("bill_item_bill_idx").on(t.billId),
+    index("bill_item_product_idx").on(t.productId),
   ]
 );
 
-// Payments
+// ─── Payments ─────────────────────────────────────────────────────────────────
 export const payments = pgTable(
   "payments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     shopId: uuid("shop_id")
       .notNull()
-      .references(() => shops.id, { onDelete: "cascade" }), //shop id
+      .references(() => shops.id, { onDelete: "cascade" }),
     customerId: uuid("customer_id")
       .notNull()
-      .references(() => customers.id), //customer id
-    billId: uuid("bill_id").references(() => bills.id), // optional - can be advance payment
-    amountPaise: integer("amount_paise").notNull(), //paid amount in paise
-    paymentMethod: text("payment_method").default("cash"), // cash, card, upi, bank
-    referenceNumber: text("reference_number"), //payment reference number for card, upi, bank
-    notes: text("notes"), //additional notes for payment
-    createdAt: timestamp("created_at").defaultNow().notNull(), //timestamp of payment
+      .references(() => customers.id, { onDelete: "restrict" }),
+    billId: uuid("bill_id").references(() => bills.id, {
+      onDelete: "set null",
+    }),
+    amountPaise: integer("amount_paise").notNull(),
+    paymentMethod: paymentMethodEnum("payment_method")
+      .default("cash")
+      .notNull(),
+    referenceNumber: text("reference_number"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [
-    index("payment_shopId_idx").on(table.shopId),
-    index("payment_customerId_idx").on(table.customerId),
-    index("payment_billId_idx").on(table.billId),
+  (t) => [
+    index("payment_shop_idx").on(t.shopId),
+    index("payment_customer_idx").on(t.customerId),
+    index("payment_bill_idx").on(t.billId),
   ]
 );
 
-// Purchases (inventory restocking)
+// ─── Purchases ────────────────────────────────────────────────────────────────
 export const purchases = pgTable(
   "purchases",
   {
@@ -184,7 +218,7 @@ export const purchases = pgTable(
       .references(() => shops.id, { onDelete: "cascade" }),
     productId: uuid("product_id")
       .notNull()
-      .references(() => products.id),
+      .references(() => products.id, { onDelete: "restrict" }),
     purchaseDate: timestamp("purchase_date").defaultNow().notNull(),
     quantity: integer("quantity").notNull(),
     unitCostPaise: integer("unit_cost_paise").notNull(),
@@ -194,8 +228,8 @@ export const purchases = pgTable(
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [
-    index("purchase_shopId_idx").on(table.shopId),
-    index("purchase_productId_idx").on(table.productId),
+  (t) => [
+    index("purchase_shop_idx").on(t.shopId),
+    index("purchase_product_idx").on(t.productId),
   ]
 );

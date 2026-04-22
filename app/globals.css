@@ -31,7 +31,7 @@
   /* Status colors */
   --status-paid-bg: #f0fdf4;
   --status-paid-text: #16a34a;
-  --status-paid-border: --status-partial-bg: #fffbeb;
+  --status-partial-bg: #fffbeb;
   --status-partial-text: #d97706;
   --status-unpaid-bg: #fef2f2;
   --status-unpaid-text: #dc2626;

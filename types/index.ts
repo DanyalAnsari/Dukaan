@@ -20,5 +20,13 @@ export type BillItem = InferSelectModel<typeof billItems>;
 export type Shop = InferSelectModel<typeof shops>;
 export type Payment = InferSelectModel<typeof payments>;
 export type Purchase = InferSelectModel<typeof purchases>;
-export type BillStatus = "paid" | "credit" | "partial" | "unpaid";
+export type BillStatus = "paid" | "credit" | "partial" | "draft";
 export type PaymentMethod = "cash" | "upi" | "card" | "credit";
+
+export type ActionResult =
+  | { success: true }
+  | {
+      success: false;
+      message: string;
+      errors?: { field: unknown; message: string }[];
+    };
