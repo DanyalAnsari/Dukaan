@@ -3,6 +3,13 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  manifest: "/manifest.json",
+  themeColor: "#1a56db",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Dukaan" },
+};
 
 const instrumentSansHeading = Instrument_Sans({
   subsets: ["latin"],

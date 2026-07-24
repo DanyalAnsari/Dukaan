@@ -1,3 +1,5 @@
+import { Customer } from "@/types";
+
 export const LOGO = "Dukaan";
 
 export const GST_RATES = [0, 5, 12, 18, 28] as const;
@@ -38,3 +40,17 @@ export const GST_RATE_OPTIONS = [
 ] as const;
 
 export const PAYMENT_METHODS = ["cash", "upi", "card"] as const;
+
+export const WALK_IN_CUSTOMER = {
+  id: "walk-in",
+  name: "Walk-in Customer",
+  phone: null,
+  email: null,
+  address: null,
+  shopId: "",
+  outstandingBalancePaise: 0,
+  creditLimitPaise: null,
+  isActive: true,
+  createdAt: new Date(0),
+  updatedAt: new Date(0),
+} satisfies Customer;

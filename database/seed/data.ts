@@ -1,3 +1,4 @@
+// seed/data.ts
 export type UserIdMap = Record<string, string>;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -11,6 +12,7 @@ export const seedUserDefs = [
     email: "rajesh@shop.com",
     password: "Password123!",
     emailVerified: true,
+    role: "user",
   },
   {
     key: "owner2",
@@ -18,6 +20,7 @@ export const seedUserDefs = [
     email: "priya@store.com",
     password: "Password123!",
     emailVerified: true,
+    role: "user",
   },
   {
     key: "staff1",
@@ -25,6 +28,15 @@ export const seedUserDefs = [
     email: "amit@shop.com",
     password: "Password123!",
     emailVerified: true,
+    role: "user",
+  },
+  {
+    key: "manager1",
+    name: "Neha Sharma",
+    email: "neha@store.com",
+    password: "Password123!",
+    emailVerified: true,
+    role: "user",
   },
 ] as const;
 
@@ -62,11 +74,44 @@ export const seedShops = (users: UserIdMap) => [
   },
 ];
 
+export const seedOrganizations = [
+  { name: "Kumar General Store", slug: "kumar-general-store" },
+  { name: "Priya Electronics", slug: "priya-electronics" },
+];
+
+export const seedMembers = (
+  organizations: Record<string, string>,
+  users: UserIdMap
+) => [
+  { organizationId: organizations.organization1, userId: users.owner1, role: "owner" },
+  { organizationId: organizations.organization1, userId: users.staff1, role: "member" },
+  { organizationId: organizations.organization2, userId: users.owner2, role: "owner" },
+  { organizationId: organizations.organization2, userId: users.manager1, role: "admin" },
+];
+
+export const seedSubscriptions = (organizations: Record<string, string>) => [
+  {
+    plan: "pro",
+    referenceId: organizations.organization1,
+    status: "active",
+    periodStart: new Date("2026-07-01T00:00:00Z"),
+    periodEnd: new Date("2026-08-01T00:00:00Z"),
+  },
+  {
+    plan: "starter",
+    referenceId: organizations.organization2,
+    status: "active",
+    periodStart: new Date("2026-07-01T00:00:00Z"),
+    periodEnd: new Date("2026-08-01T00:00:00Z"),
+  },
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Products
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const seedProducts = (shops: Record<string, string>) => [
+  // ── Shop 1 (Kumar General Store) ─────────────────────────────────────────
   {
     shopId: shops.shop1,
     name: "Tata Salt",
@@ -127,6 +172,7 @@ export const seedProducts = (shops: Record<string, string>) => [
     reorderLevel: 10,
     isActive: true,
   },
+  // ── Shop 2 (Priya Electronics) ────────────────────────────────────────────
   {
     shopId: shops.shop2,
     name: 'Samsung LED TV 32"',
@@ -179,6 +225,7 @@ export const seedProducts = (shops: Record<string, string>) => [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const seedCustomers = (shops: Record<string, string>) => [
+  // ── Shop 1 ────────────────────────────────────────────────────────────────
   {
     shopId: shops.shop1,
     name: "Suresh Sharma",
@@ -209,6 +256,7 @@ export const seedCustomers = (shops: Record<string, string>) => [
     creditLimitPaise: null,
     isActive: true,
   },
+  // ── Shop 2 ────────────────────────────────────────────────────────────────
   {
     shopId: shops.shop2,
     name: "Vikram Malhotra",
@@ -233,17 +281,17 @@ export const seedCustomers = (shops: Record<string, string>) => [
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Bills
-// Adjust status values to match your billStatusEnum exactly
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const seedBills = (
   shops: Record<string, string>,
-  customers: Record<string, string>
+  customers: Record<string, string>,
+  users: UserIdMap
 ) => [
   {
     shopId: shops.shop1,
     invoiceNumber: "KGS-1001",
-    customerId: customers.customer1,
+    customerId: customers.customer1, // Suresh Sharma
     billDate: new Date("2024-01-15T10:30:00"),
     subtotalPaise: 21500,
     discountPaise: 0,
@@ -254,26 +302,28 @@ export const seedBills = (
     amountPaidPaise: 22790,
     amountDuePaise: 0,
     notes: null,
+    createdByUserId: users.staff1,
   },
   {
     shopId: shops.shop1,
     invoiceNumber: "KGS-1002",
-    customerId: customers.customer2,
+    customerId: customers.customer2, // Anita Desai
     billDate: new Date("2024-01-16T14:20:00"),
     subtotalPaise: 6500,
     discountPaise: 500,
     gstTotalPaise: 0,
     totalPaise: 6000,
-    status: "credit" as const, // ← was "unpaid", not in enum
+    status: "credit" as const,
     paymentMethod: "cash" as const,
     amountPaidPaise: 0,
     amountDuePaise: 6000,
     notes: "Pay by end of month",
+    createdByUserId: users.owner1,
   },
   {
     shopId: shops.shop2,
     invoiceNumber: "PE-2001",
-    customerId: customers.customer4,
+    customerId: customers.customer4, // Vikram Malhotra
     billDate: new Date("2024-01-10T11:00:00"),
     subtotalPaise: 1500000,
     discountPaise: 50000,
@@ -284,11 +334,12 @@ export const seedBills = (
     amountPaidPaise: 1711000,
     amountDuePaise: 0,
     notes: "New Year Sale",
+    createdByUserId: users.manager1,
   },
   {
     shopId: shops.shop2,
     invoiceNumber: "PE-2002",
-    customerId: customers.customer5,
+    customerId: customers.customer5, // Neha Kapoor
     billDate: new Date("2024-01-12T15:30:00"),
     subtotalPaise: 1200000,
     discountPaise: 0,
@@ -299,12 +350,13 @@ export const seedBills = (
     amountPaidPaise: 1000000,
     amountDuePaise: 536000,
     notes: "Remaining amount to be paid on delivery",
+    createdByUserId: users.owner2,
   },
   {
     shopId: shops.shop1,
     invoiceNumber: "KGS-1003",
-    customerId: customers.customer3, // Walk-in
-    billDate: new Date(),
+    customerId: customers.customer3, // Walk-in Customer
+    billDate: new Date("2024-01-17T09:00:00"),
     subtotalPaise: 500,
     discountPaise: 0,
     gstTotalPaise: 60,
@@ -314,6 +366,7 @@ export const seedBills = (
     amountPaidPaise: 0,
     amountDuePaise: 560,
     notes: "Draft bill for walk-in",
+    createdByUserId: users.staff1,
   },
 ];
 
@@ -325,6 +378,7 @@ export const seedBillItems = (
   bills: Record<string, string>,
   products: Record<string, string>
 ) => [
+  // ── KGS-1001 (paid, Suresh Sharma) ───────────────────────────────────────
   {
     billId: bills.bill1,
     productId: products.product1,
@@ -364,6 +418,7 @@ export const seedBillItems = (
     gstAmountPaise: 300,
     lineTotalPaise: 2800,
   },
+  // ── KGS-1002 (credit, Anita Desai) ───────────────────────────────────────
   {
     billId: bills.bill2,
     productId: products.product4,
@@ -390,6 +445,7 @@ export const seedBillItems = (
     gstAmountPaise: 0,
     lineTotalPaise: 2000,
   },
+  // ── PE-2001 (paid, Vikram Malhotra) ──────────────────────────────────────
   {
     billId: bills.bill3,
     productId: products.product5,
@@ -403,6 +459,7 @@ export const seedBillItems = (
     gstAmountPaise: 270000,
     lineTotalPaise: 1770000,
   },
+  // ── PE-2002 (partial, Neha Kapoor) ───────────────────────────────────────
   {
     billId: bills.bill4,
     productId: products.product6,
@@ -416,8 +473,9 @@ export const seedBillItems = (
     gstAmountPaise: 336000,
     lineTotalPaise: 1536000,
   },
+  // ── KGS-1003 (draft, Walk-in) ─────────────────────────────────────────────
   {
-    billId: bills.bill5, // KGS-1003 (draft)
+    billId: bills.bill5,
     productId: products.product3,
     productName: "Parle-G Biscuits",
     productSku: "BIS-001",
@@ -433,17 +491,20 @@ export const seedBillItems = (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Payments
+// userId = the staff member who recorded the payment
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const seedPayments = (
   shops: Record<string, string>,
   customers: Record<string, string>,
-  bills: Record<string, string>
+  bills: Record<string, string>,
+  users: UserIdMap
 ) => [
   {
     shopId: shops.shop1,
     customerId: customers.customer1,
     billId: bills.bill1,
+    recordedByUserId: users.owner1,
     amountPaise: 22790,
     paymentMethod: "upi" as const,
     referenceNumber: "UPI123456789",
@@ -454,6 +515,7 @@ export const seedPayments = (
     shopId: shops.shop2,
     customerId: customers.customer4,
     billId: bills.bill3,
+    recordedByUserId: users.owner2,
     amountPaise: 1711000,
     paymentMethod: "card" as const,
     referenceNumber: "CARD987654321",
@@ -464,6 +526,7 @@ export const seedPayments = (
     shopId: shops.shop2,
     customerId: customers.customer5,
     billId: bills.bill4,
+    recordedByUserId: users.owner2,
     amountPaise: 1000000,
     paymentMethod: "cash" as const,
     referenceNumber: null,
@@ -473,12 +536,13 @@ export const seedPayments = (
   {
     shopId: shops.shop1,
     customerId: customers.customer2,
-    billId: null, // Advance payment or general credit clearing
+    billId: null, // standalone credit clearance, not tied to a bill
+    recordedByUserId: users.owner1,
     amountPaise: 50000,
     paymentMethod: "bank" as const,
     referenceNumber: "TXN11223344",
     notes: "Monthly credit clearance",
-    createdAt: new Date(),
+    createdAt: new Date("2024-01-18T10:00:00"),
   },
 ];
 

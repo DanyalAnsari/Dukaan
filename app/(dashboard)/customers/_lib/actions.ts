@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath, refresh } from "next/cache";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { db } from "@/database";
 import { customers } from "@/database/schemas";
 import { customerSchema, type CustomerInput } from "./schema";
 import { ActionResult } from "@/types";
 import { requireShop } from "@/lib/require-shop";
+import { assertLimit, getShopPlan } from "@/lib/plan-limits";
 
 function parseCustomerData(
   data: CustomerInput
@@ -35,6 +36,12 @@ export async function updateCustomerAction(
   }
 
   try {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::integer` })
+      .from(customers)
+      .where(and(eq(customers.shopId, shop.id), eq(customers.isActive, true)));
+    const plan = await getShopPlan(shop.organizationId);
+    assertLimit(count, plan.limits.customers, "Customer");
     const { name, phone, email, address, creditLimitRupees } = result.data;
     const creditLimitPaise = Math.round((creditLimitRupees ?? 0) * 100);
 

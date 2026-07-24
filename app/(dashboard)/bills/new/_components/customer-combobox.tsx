@@ -14,25 +14,20 @@ import { useCartStore } from "@/components/providers/cart-store-provider";
 import { User } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-
-interface Customer {
-  id: string;
-  name: string;
-  phone: string | null;
-  outstandingBalancePaise: number | null;
-}
+import { Customer } from "@/types";
+import { WALK_IN_CUSTOMER } from "@/constants";
 
 interface CustomerComboboxProps {
   customers: Customer[];
 }
 
 export default function CustomerCombobox({ customers }: CustomerComboboxProps) {
-  const { customerId, setCustomer } = useCartStore((s) => s);
+  const { customer: cartCustomer, setCustomer } = useCartStore((s) => s);
   const [open, setOpen] = useState(false);
 
   const handleSelectCustomer = useCallback(
     (customer: Customer) => {
-      setCustomer(customer.id, customer.name);
+      setCustomer(customer);
       toast.success(`Customer selected: ${customer.name}`);
       setOpen(false);
     },
@@ -40,30 +35,22 @@ export default function CustomerCombobox({ customers }: CustomerComboboxProps) {
   );
 
   const handleSelectWalkIn = useCallback(() => {
-    setCustomer(null, "Walk-in Customer");
+    setCustomer(null);
     toast.success("Walk-in customer selected");
     setOpen(false);
   }, [setCustomer]);
 
   // Add walk-in option at the top
-  const customerItems = useMemo(() => {
-    return [
-      {
-        id: "walk-in",
-        name: "Walk-in Customer",
-        phone: null,
-        outstandingBalancePaise: 0,
-      },
-      ...customers,
-    ];
+  const customerItems: Customer[] = useMemo(() => {
+    return [WALK_IN_CUSTOMER, ...customers];
   }, [customers]);
 
   const selectedCustomer = useMemo(() => {
-    const found = customerId
-      ? customerItems.find((c) => c.id === customerId)
+    const found = cartCustomer?.id
+      ? customerItems.find((c) => c.id === cartCustomer.id)
       : undefined;
     return found || customerItems[0]; // Default to walk-in
-  }, [customerId, customerItems]);
+  }, [cartCustomer, customerItems]);
 
   return (
     <Combobox

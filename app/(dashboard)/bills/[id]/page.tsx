@@ -13,8 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import CTAbuttons from "./_components/CTA-buttons";
-import { getShopByUserId } from "@/database/data/shop";
-import { getSession } from "@/lib/get-session";
 import { and } from "drizzle-orm";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -25,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { requireShop } from "@/lib/require-shop";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -33,14 +32,14 @@ interface PageProps {
 export default async function BillViewPage({ params }: PageProps) {
   const { id } = await params;
 
-  const session = await getSession();
-  const shop = (await getShopByUserId(session!.user.id))!;
+  const { shop } = await requireShop();
 
   const bill = await db.query.bills.findFirst({
     where: and(eq(bills.id, id), eq(bills.shopId, shop.id)),
     with: {
       items: true,
       customer: true,
+      createdBy: true,
     },
   });
 
@@ -51,7 +50,7 @@ export default async function BillViewPage({ params }: PageProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div>
           <h1 className="font-heading text-2xl font-bold">
-            Invoice {bill.invoiceNumber}
+            {shop.gstin ? "Tax Invoice" : "Bill of Supply"} {bill.invoiceNumber}
           </h1>
           <p className="font-heading text-sm text-muted-foreground">
             {formatDate(new Date(bill.billDate))}
@@ -91,6 +90,12 @@ export default async function BillViewPage({ params }: PageProps) {
               </div>
               <div className="font-mono font-medium">{bill.invoiceNumber}</div>
             </div>
+            {bill.createdBy && (
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground">Created By</div>
+                <div className="font-medium">{bill.createdBy.name}</div>
+              </div>
+            )}
             <div className="text-right">
               <div className="text-sm text-muted-foreground">Date</div>
               <div className="font-medium">

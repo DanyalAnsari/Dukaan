@@ -1,33 +1,22 @@
 "use server";
 
 import { revalidatePath, refresh } from "next/cache"; // ← refresh() is new in Next 16
-import { eq, and } from "drizzle-orm";
-import { redirect } from "next/navigation";
+import { eq, and, sql } from "drizzle-orm";
 import { db } from "@/database";
-import { products } from "@/database/schemas";
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
+import { products, stockAdjustments } from "@/database/schemas";
+import { requireShopRole } from "@/lib/require-shop";
+import { assertLimit, getShopPlan } from "@/lib/plan-limits";
 import { productSchema, type ProductSchema } from "./schema";
 import { ActionResult } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-async function requireShop() {
-  const session = await getSession();
-  if (!session?.user) redirect("/login");
-
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
-
-  return { session, shop };
-}
 
 const PRODUCT_LIST_PATH = "/products";
 
 export async function createProductAction(
   data: ProductSchema
 ): Promise<ActionResult> {
-  const { shop } = await requireShop();
+  const { shop } = await requireShopRole(["owner", "admin"]);
 
   const result = productSchema.safeParse(data);
   if (!result.success) {
@@ -42,6 +31,12 @@ export async function createProductAction(
   }
 
   try {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::integer` })
+      .from(products)
+      .where(and(eq(products.shopId, shop.id), eq(products.isActive, true)));
+    const plan = await getShopPlan(shop.organizationId);
+    assertLimit(count, plan.limits.products, "Product");
     await db.insert(products).values({
       ...result.data,
       shopId: shop.id,
@@ -65,7 +60,7 @@ export async function updateProductAction(
   productId: string,
   data: ProductSchema
 ): Promise<ActionResult> {
-  const { shop } = await requireShop();
+  const { shop } = await requireShopRole(["owner", "admin"]);
 
   const result = productSchema.safeParse(data);
   if (!result.success) {
@@ -104,7 +99,7 @@ export async function updateProductAction(
 export async function deleteProductAction(
   productId: string
 ): Promise<ActionResult> {
-  const { shop } = await requireShop();
+  const { shop } = await requireShopRole(["owner", "admin"]);
 
   try {
     await db
@@ -119,5 +114,41 @@ export async function deleteProductAction(
   } catch (error) {
     console.error("[deleteProduct]", error);
     return { success: false, message: "Failed to delete product." };
+  }
+}
+
+export async function adjustStockAction(
+  productId: string,
+  adjustmentQty: number,
+  reason: string,
+  notes?: string | null
+): Promise<ActionResult> {
+  const { shop } = await requireShopRole(["owner", "admin"]);
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(stockAdjustments).values({
+        shopId: shop.id,
+        productId,
+        adjustmentQty,
+        reason,
+        notes: notes || null,
+      });
+
+      await tx
+        .update(products)
+        .set({
+          stockQty: sql`stock_qty + ${adjustmentQty}`,
+        })
+        .where(and(eq(products.id, productId), eq(products.shopId, shop.id)));
+    });
+
+    revalidatePath(PRODUCT_LIST_PATH);
+    refresh();
+
+    return { success: true };
+  } catch (error) {
+    console.error("[adjustStock]", error);
+    return { success: false, message: "Failed to adjust stock." };
   }
 }

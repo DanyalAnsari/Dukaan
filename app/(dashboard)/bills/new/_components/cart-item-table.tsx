@@ -13,7 +13,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/components/providers/cart-store-provider";
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 interface Product {
@@ -28,6 +28,7 @@ interface CartItemsTableProps {
 
 export default function CartItemsTable({ products }: CartItemsTableProps) {
   const { items, updateQty, removeItem } = useCartStore((state) => state);
+  const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
 
   const handleUpdateQty = useCallback(
     (productId: string, newQty: number) => {
@@ -77,8 +78,9 @@ export default function CartItemsTable({ products }: CartItemsTableProps) {
         </TableHeader>
         <TableBody>
           {items.map((item) => {
-            const product = products.find((p) => p.id === item.productId);
-            const maxQty = product?.stockQty ?? 999;
+            const product = productById.get(item.productId);
+            const unavailable = !product;
+            const maxQty = product?.stockQty ?? item.quantity;
             const itemTotal = item.unitPricePaise * item.quantity;
 
             return (
@@ -87,7 +89,7 @@ export default function CartItemsTable({ products }: CartItemsTableProps) {
                   <div className="flex flex-col">
                     <span className="font-medium">{item.productName}</span>
                     <span className="text-xs text-muted-foreground">
-                      {item.productSku || "No SKU"} • GST: {item.gstRate}%
+                      {unavailable ? "Product unavailable — remove from cart" : `${item.productSku || "No SKU"} • GST: ${item.gstRate}%`}
                     </span>
                   </div>
                 </TableCell>
@@ -110,6 +112,7 @@ export default function CartItemsTable({ products }: CartItemsTableProps) {
                       type="number"
                       className="h-8 w-16 px-1 text-center tabular-nums"
                       value={item.quantity}
+                      disabled={unavailable}
                       onChange={(e) => {
                         const val = parseInt(e.target.value, 10);
                         if (!isNaN(val)) {
@@ -127,7 +130,7 @@ export default function CartItemsTable({ products }: CartItemsTableProps) {
                       onClick={() =>
                         handleUpdateQty(item.productId, item.quantity + 1)
                       }
-                      disabled={item.quantity >= maxQty}
+                      disabled={unavailable || item.quantity >= maxQty}
                     >
                       <Plus className="h-3 w-3" />
                     </Button>

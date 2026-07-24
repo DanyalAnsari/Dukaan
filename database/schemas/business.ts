@@ -9,7 +9,7 @@ import {
   index,
   uuid,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth";
+import { organization, user } from "./auth";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 // Drizzle pgEnum → type-safe column + Postgres CHECK constraint in one shot
@@ -36,6 +36,10 @@ export const shops = pgTable(
     ownerId: uuid("owner_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id").references(() => organization.id, {
+      onDelete: "set null",
+    }),
+    billsThisMonth: integer("bills_this_month").default(0).notNull(),
     address: text("address"),
     phone: text("phone"),
     gstin: text("gstin"),
@@ -49,7 +53,10 @@ export const shops = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (t) => [index("shop_owner_idx").on(t.ownerId)]
+  (t) => [
+    index("shop_owner_idx").on(t.ownerId),
+    index("shop_organization_idx").on(t.organizationId),
+  ]
 );
 
 // ─── Products ─────────────────────────────────────────────────────────────────
@@ -141,6 +148,9 @@ export const bills = pgTable(
     amountPaidPaise: integer("amount_paid_paise").default(0).notNull(),
     amountDuePaise: integer("amount_due_paise").default(0).notNull(),
     notes: text("notes"),
+    createdByUserId: uuid("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => [
@@ -191,6 +201,9 @@ export const payments = pgTable(
     customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id, { onDelete: "restrict" }),
+    recordedByUserId: uuid("recorded_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     billId: uuid("bill_id").references(() => bills.id, {
       onDelete: "set null",
     }),
@@ -232,5 +245,27 @@ export const purchases = pgTable(
   (t) => [
     index("purchase_shop_idx").on(t.shopId),
     index("purchase_product_idx").on(t.productId),
+  ]
+);
+
+// ─── Stock Adjustments ────────────────────────────────────────────────────────
+export const stockAdjustments = pgTable(
+  "stock_adjustments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    adjustmentQty: integer("adjustment_qty").notNull(),
+    reason: text("reason").notNull(), // "Damaged" | "Theft" | "Count Correction" | "Opening Stock" | "Other"
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("stock_adjustment_shop_idx").on(t.shopId),
+    index("stock_adjustment_product_idx").on(t.productId),
   ]
 );

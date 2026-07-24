@@ -10,18 +10,13 @@ import {
   products,
   shops,
 } from "@/database/schemas";
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
 import { billSchema, type BillSchema } from "./schema";
-import { redirect } from "next/navigation";
 import { BillStatus } from "@/types";
+import { requireShop } from "@/lib/require-shop";
+import { assertLimit, getShopPlan } from "@/lib/plan-limits";
 
 export async function createBillAction(data: BillSchema) {
-  const session = await getSession();
-  if (!session?.user) redirect("/login");
-
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
+  const { shop, session } = await requireShop();
 
   const result = billSchema.safeParse(data);
   if (!result.success) {
@@ -53,8 +48,10 @@ export async function createBillAction(data: BillSchema) {
   }
 
   const isDraft = requestedStatus === "draft";
+  const plan = await getShopPlan(shop.organizationId);
   try {
     const billId = await db.transaction(async (tx) => {
+      assertLimit(shop.billsThisMonth, plan.limits.billsPerMonth, "Monthly bill");
       // 1. Atomically increment invoice number
       const [updatedShop] = await tx
         .update(shops)
@@ -142,10 +139,32 @@ export async function createBillAction(data: BillSchema) {
       );
       const amountDuePaise = Math.max(0, totalPaise - amountPaidPaise);
 
-      if (!isDraft && !customerId && amountDuePaise > 0) {
+      if (!customerId && amountDuePaise > 0) {
         throw new Error(
           "Walk-in customers must pay the full amount. Credit or partial payments are only allowed for registered customers."
         );
+      }
+
+      if (paymentMethod === "credit" && customerId) {
+        const customer = await tx.query.customers.findFirst({
+          where: and(
+            eq(customers.id, customerId),
+            eq(customers.shopId, shop.id)
+          ),
+        });
+
+        if (!customer) {
+          throw new Error("Customer not found");
+        }
+
+        const newBalance = customer.outstandingBalancePaise + totalPaise;
+        const creditLimit = customer.creditLimitPaise;
+        if (creditLimit && creditLimit > 0 && newBalance > creditLimit) {
+          throw new Error(
+            `Credit limit exceeded. Limit: ₹${creditLimit / 100}, ` +
+              `Current due: ₹${customer.outstandingBalancePaise / 100}`
+          );
+        }
       }
 
       const status: BillStatus = isDraft
@@ -161,6 +180,7 @@ export async function createBillAction(data: BillSchema) {
         .insert(bills)
         .values({
           shopId: shop.id,
+          createdByUserId: session.user.id,
           customerId: customerId ?? null,
           invoiceNumber,
           billDate: new Date(),
@@ -187,7 +207,19 @@ export async function createBillAction(data: BillSchema) {
           .set({
             outstandingBalancePaise: sql`outstanding_balance_paise + ${amountDuePaise}`,
           })
-          .where(eq(customers.id, customerId));
+          .where(
+            and(
+              eq(customers.id, customerId),
+              eq(customers.shopId, shop.id)
+            )
+          );
+      }
+
+      if (!isDraft) {
+        await tx
+          .update(shops)
+          .set({ billsThisMonth: sql`${shops.billsThisMonth} + 1` })
+          .where(eq(shops.id, shop.id));
       }
 
       return newBill.id;
@@ -201,7 +233,6 @@ export async function createBillAction(data: BillSchema) {
 
     return { success: true, billId };
   } catch (error) {
-    console.error("Error creating bill:", error);
     const message =
       error instanceof Error ? error.message : "Failed to create bill";
     return {

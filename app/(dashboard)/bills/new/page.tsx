@@ -1,5 +1,3 @@
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
 import { getActiveProducts } from "@/database/data/products";
 import { getActiveCustomers } from "@/database/data/customers";
 import ClearCartButton from "./_components/clear-cart-button";
@@ -13,15 +11,16 @@ import ProductCombobox from "./_components/product-combobox";
 import { Separator } from "@/components/ui/separator";
 import CartItemsTable from "./_components/cart-item-table";
 import BillSummary from "./_components/bill-summary";
+import { Metadata } from "next";
+import { requireShop } from "@/lib/require-shop";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "New Bill | POS",
   description: "Create a new sales invoice",
 };
 
 export default async function NewBillPage() {
-  const session = await getSession();
-  const shop = (await getShopByUserId(session!.user.id))!;
+  const { shop } = await requireShop();
 
   // Parallel data fetching
   const [products, customers] = await Promise.all([

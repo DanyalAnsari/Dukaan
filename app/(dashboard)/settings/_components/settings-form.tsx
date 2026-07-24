@@ -33,14 +33,14 @@ import { Shop } from "@/types";
 
 interface SettingsFormProps {
   shop: Shop;
-  user: any;
+  user: { email: string };
 }
 
 export default function SettingsForm({ shop, user }: SettingsFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<ShopSettingsInput, any, ShopSettingsOutput>({
+  const form = useForm<ShopSettingsInput, unknown, ShopSettingsOutput>({
     resolver: zodResolver(shopSettingsSchema),
     defaultValues: {
       name: shop.name || "",

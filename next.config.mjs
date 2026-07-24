@@ -13,8 +13,10 @@ const nextConfig = {
     ],
   },
 
-  // Transpile packages that need it
-  transpilePackages: ["lucide-react"],
+  experimental: {
+    authInterrupts: true,
+    optimizePackageImports: ["lucide-react"],
+  },
 
   // Vercel optimization: trailing slash for better caching
   trailingSlash: false,

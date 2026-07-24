@@ -1,6 +1,5 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "..";
-import { customers } from "../schemas";
 
 export const getActiveCustomers = async (shopId: string) =>
   await db.query.customers.findMany({

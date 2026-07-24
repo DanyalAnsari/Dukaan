@@ -11,21 +11,10 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { formatCurrency } from "@/lib/utils";
+import { Product } from "@/types";
 import { AlertTriangle, Package } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-
-interface Product {
-  id: string;
-  name: string;
-  sku: string | null;
-  hsnCode: string | null;
-  unitPricePaise: number;
-  mrpPaise: number | null;
-  gstRate: number | null;
-  stockQty: number | null;
-  unit: string | null;
-}
 
 interface ProductComboboxProps {
   products: Product[];
@@ -34,6 +23,7 @@ interface ProductComboboxProps {
 export default function ProductCombobox({ products }: ProductComboboxProps) {
   const items = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
+  const quantityByProductId = useMemo(() => new Map(items.map((item) => [item.productId, item.quantity])), [items]);
   const [open, setOpen] = useState(false);
 
   // ✅ Keyboard shortcut — must be useEffect, not useState
@@ -61,8 +51,7 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
 
   const handleAddProduct = useCallback(
     (product: Product) => {
-      const existingItem = items.find((i) => i.productId === product.id);
-      const currentQty = existingItem?.quantity ?? 0;
+      const currentQty = quantityByProductId.get(product.id) ?? 0;
       const stockQty = product.stockQty ?? 999;
 
       if (stockQty === 0) {
@@ -95,7 +84,7 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
 
       setOpen(false);
     },
-    [addItem, items]
+    [addItem, quantityByProductId]
   );
 
   return (
@@ -122,8 +111,7 @@ export default function ProductCombobox({ products }: ProductComboboxProps) {
         <ComboboxList>
           {(item) => {
             const product = item as Product;
-            const existingItem = items.find((i) => i.productId === product.id);
-            const currentQty = existingItem?.quantity ?? 0;
+            const currentQty = quantityByProductId.get(product.id) ?? 0;
             const stockQty = product.stockQty ?? 999;
             const isOutOfStock = stockQty === 0;
             const isAtMax = currentQty >= stockQty;

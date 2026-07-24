@@ -1,20 +1,14 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Plus, Package, PackageX } from "lucide-react";
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
 import { getActiveProducts } from "@/database/data/products";
 import { Button } from "@/components/ui/button";
 import StatsCard from "@/components/shared/stats-card";
 import { ProductsDataTable } from "./_components/data-table";
 import { deleteProductAction } from "./_lib/actions";
+import { requireShop } from "@/lib/require-shop";
 
 export default async function ProductsPage() {
-  const session = await getSession();
-  if (!session?.user) redirect("/login");
-
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
+  const { shop } = await requireShop();
 
   const allProducts = await getActiveProducts(shop.id);
 

@@ -17,6 +17,7 @@ const step2Schema = z.object({
     .string()
     .length(15, "GSTIN must be exactly 15 characters")
     .or(z.literal("")),
+  defaultGstRate: z.coerce.number<number>().min(0).max(100).default(18),
 });
 
 const step3Schema = z.object({

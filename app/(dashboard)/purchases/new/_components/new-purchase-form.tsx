@@ -2,7 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -96,7 +96,8 @@ export function NewPurchaseForm({
   });
 
   const { errors } = form.formState;
-  const selectedProductId = form.watch("productId");
+  const selectedProductId = useWatch({ control: form.control, name: "productId" });
+  const quantity = useWatch({ control: form.control, name: "quantity" });
   const selectedProduct = products.find((p) => p.id === selectedProductId);
 
   function onSubmit(data: PurchaseOutput) {
@@ -252,7 +253,7 @@ export function NewPurchaseForm({
                     </span>
                     <span className="font-mono font-medium text-green-600">
                       {(selectedProduct.stockQty ?? 0) +
-                        (Number(form.watch("quantity")) || 0)}
+                        (Number(quantity) || 0)}
                       {selectedProduct.unit}
                     </span>
                   </div>

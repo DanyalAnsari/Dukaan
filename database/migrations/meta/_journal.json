@@ -15,6 +15,41 @@
       "when": 1776876487914,
       "tag": "0001_bouncy_paibok",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784752484254,
+      "tag": "0002_pretty_maggott",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784756557660,
+      "tag": "0003_late_pet_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784798410004,
+      "tag": "0004_kind_reptil",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784890000000,
+      "tag": "0005_restore_phase_2_3_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784840401919,
+      "tag": "0006_steady_mephisto",
+      "breakpoints": true
     }
   ]
 }

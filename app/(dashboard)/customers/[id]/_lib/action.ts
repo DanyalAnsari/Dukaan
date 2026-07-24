@@ -26,7 +26,7 @@ export type PaymentOutput = z.output<typeof paymentSchema>;
 export async function recordPaymentAction(
   data: PaymentInput
 ): Promise<ActionResult> {
-  const { shop } = await requireShop();
+  const { shop, session } = await requireShop();
 
   const result = paymentSchema.safeParse(data);
   if (!result.success) {
@@ -45,6 +45,21 @@ export async function recordPaymentAction(
 
   try {
     await db.transaction(async (tx) => {
+      const customer = await tx.query.customers.findFirst({
+        where: and(eq(customers.id, customerId), eq(customers.shopId, shopId)),
+      });
+      if (!customer) throw new Error("Customer not found.");
+
+      if (billId) {
+        const bill = await tx.query.bills.findFirst({
+          where: and(eq(bills.id, billId), eq(bills.shopId, shopId)),
+        });
+        if (!bill || bill.customerId !== customerId) throw new Error("Bill not found.");
+        if (amountPaise > (bill.amountDuePaise ?? 0)) {
+          throw new Error("Payment cannot exceed the outstanding balance.");
+        }
+      }
+
       // ── Step 1: Record the payment ──────────────────────────────────────────
       await tx.insert(payments).values({
         shopId,
@@ -53,6 +68,7 @@ export async function recordPaymentAction(
         amountPaise, // already a rounded integer from the schema
         paymentMethod,
         notes: notes ?? null,
+        recordedByUserId: session.user.id,
       });
 
       // ── Step 2: Decrement customer's outstanding balance ─────────────────────

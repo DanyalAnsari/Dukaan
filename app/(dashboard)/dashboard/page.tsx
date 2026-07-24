@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { BillStatus } from "@/types";
 import { format } from "date-fns";
-import { getSession } from "@/lib/get-session";
 import { formatCurrency } from "@/lib/utils";
 
-import { IndianRupee, Package, Plus, Receipt, Users } from "lucide-react";
+import { CreditCardIcon, IndianRupee, Package, Plus, Receipt, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -17,7 +16,6 @@ import {
 import StatsCard from "@/components/shared/stats-card";
 import StatusBadge from "@/components/shared/status-badge";
 
-import { getShopByUserId } from "@/database/data/shop";
 import {
   getTodaysBills,
   getPaymentBreakdown,
@@ -26,19 +24,23 @@ import {
 import { getLowStockProducts } from "@/database/data/products";
 import { getOutstandingCustomers } from "@/database/data/customers";
 
-import { SalesChart } from "./_components/sales-chart";
-import { PaymentBreakdown } from "./_components/payment-breakdown";
+import { DashboardCharts } from "./_components/dashboard-charts";
 import { CardWrapper } from "./_components/card-wrapper";
+import { Metadata } from "next";
+import { requireShop } from "@/lib/require-shop";
+import { getShopPlan } from "@/lib/plan-limits";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Dashboard",
   description: "Your shop overview",
 };
 
 export default async function DashboardPage() {
-  const session = await getSession();
-  const shop = (await getShopByUserId(session!.user.id))!;
-
+  const { shop, session } = await requireShop();
+  const plan = await getShopPlan(shop.organizationId);
   const [
     todayBills,
     lowStockProducts,
@@ -54,10 +56,11 @@ export default async function DashboardPage() {
   ]);
 
   // Calculate stats
-  const todayCollection = todayBills.reduce(
-    (sum, b) => (b.status === "paid" ? sum + b.totalPaise : 0),
-    0
-  );
+  const todayCollection = todayBills.reduce((sum, b) => {
+    if (b.status === "paid") return sum + b.totalPaise;
+    if (b.status === "partial") return sum + b.amountPaidPaise;
+    return 0;
+  }, 0);
 
   const billsTodayCount = todayBills.length;
 
@@ -156,10 +159,22 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      {session.user.id === shop.ownerId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><CreditCardIcon />{plan.plan} plan <Badge variant="secondary">{plan.status}</Badge></CardTitle>
+            <CardDescription>{plan.limits.billsPerMonth === -1 ? "Unlimited monthly bills" : `${shop.billsThisMonth} of ${plan.limits.billsPerMonth} monthly bills used`}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {plan.limits.billsPerMonth !== -1 && <Progress value={Math.min(100, shop.billsThisMonth / plan.limits.billsPerMonth * 100)} className="flex-1" />}
+            <Button asChild variant="outline" size="sm"><Link href="/settings/billing">Manage plan</Link></Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <SalesChart data={chartData} />
-        <PaymentBreakdown data={paymentBreakdown} />
+        <DashboardCharts sales={chartData} payments={paymentBreakdown} />
       </div>
 
       {/* Two Column Layout */}

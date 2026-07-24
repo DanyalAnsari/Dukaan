@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import {
   TrendingUp,
   Package,
@@ -9,8 +9,8 @@ import {
   BadgePercent,
 } from "lucide-react";
 
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
+import { requireShopRole } from "@/lib/require-shop";
+import { getShopPlan } from "@/lib/plan-limits";
 import {
   getMonthlySalesReport,
   getTopSellingProducts,
@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/table";
 import StatsCard from "@/components/shared/stats-card";
 import { FadeIn, FadeInStagger } from "@/components/shared/motion-wrapper";
+import { ExportControls } from "./_components/export-controls";
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -61,16 +62,18 @@ function EmptyTableRow({ cols, message }: { cols: number; message: string }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function ReportsPage() {
-  const session = await getSession();
-  if (!session?.user) redirect("/login");
+  const { shop } = await requireShopRole(["owner", "admin"]);
+  const plan = await getShopPlan(shop.organizationId);
+  if (!plan.limits.reports) redirect("/settings/billing");
 
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
-
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59, 999);
   const [monthlySales, topProducts, gstReport] = await Promise.all([
     getMonthlySalesReport(shop.id),
     getTopSellingProducts(shop.id, 10),
-    getGSTReport(shop.id),
+    getGSTReport(shop.id, monthStart, monthEnd),
   ]);
 
   // ── Summary stats computed from already-fetched data — no extra DB round-trip
@@ -106,7 +109,7 @@ export default async function ReportsPage() {
       title: "GST Collected",
       stat: formatCurrency(totalGSTCollected),
       icon: BadgePercent,
-      description: "Total tax liability",
+      description: "This month’s tax liability",
       className: "font-mono",
     },
   ];
@@ -123,6 +126,7 @@ export default async function ReportsPage() {
             Sales performance, top products, and GST compliance — last 12
             months.
           </p>
+          <div className="mt-4"><ExportControls /></div>
         </div>
       </FadeIn>
 
@@ -213,7 +217,7 @@ export default async function ReportsPage() {
                   GST Tax Summary
                 </CardTitle>
                 <CardDescription>
-                  Tax liability by slab — all time
+                  Tax liability by slab — current month
                 </CardDescription>
               </div>
               <Percent className="h-4 w-4 text-muted-foreground" />
@@ -224,12 +228,15 @@ export default async function ReportsPage() {
                   <TableRow>
                     <TableHead>Rate</TableHead>
                     <TableHead className="text-right">Taxable</TableHead>
-                    <TableHead className="text-right">Tax Collected</TableHead>
+                    <TableHead className="text-right">CGST</TableHead>
+                    <TableHead className="text-right">SGST</TableHead>
+                    <TableHead className="text-right">IGST</TableHead>
+                    <TableHead className="text-right">Total GST</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {gstReport.length === 0 ? (
-                    <EmptyTableRow cols={3} message="No GST data yet." />
+                    <EmptyTableRow cols={6} message="No GST data this month." />
                   ) : (
                     gstReport.map((item) => (
                       <TableRow key={item.gstRate}>
@@ -238,6 +245,15 @@ export default async function ReportsPage() {
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           {formatCurrency(item.taxableAmount)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatCurrency(item.gstAmount / 2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatCurrency(item.gstAmount / 2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatCurrency(0)}
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           {formatCurrency(item.gstAmount)}
@@ -252,6 +268,15 @@ export default async function ReportsPage() {
                       <TableCell>Total</TableCell>
                       <TableCell className="text-right font-mono">
                         {formatCurrency(gstTotalTaxable)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatCurrency(gstTotalAmount / 2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatCurrency(gstTotalAmount / 2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatCurrency(0)}
                       </TableCell>
                       <TableCell className="text-right font-mono text-primary">
                         {formatCurrency(gstTotalAmount)}

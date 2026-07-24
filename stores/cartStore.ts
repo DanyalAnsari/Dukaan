@@ -1,4 +1,4 @@
-import { PaymentMethod } from "@/types";
+import { Customer, PaymentMethod } from "@/types";
 import { createStore } from "zustand/vanilla";
 
 export interface CartItem {
@@ -13,21 +13,22 @@ export interface CartItem {
 
 export type CartState = {
   items: CartItem[];
-  customerId: string | null;
-  customerName: string | null;
+  customer: Customer | null;
   paymentMethod: PaymentMethod;
   amountPaid: number;
   discountPaise: number;
+  discountType: "flat" | "percentage";
 };
 
 export type CartActions = {
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   removeItem: (productId: string) => void;
   updateQty: (productId: string, quantity: number) => void;
-  setCustomer: (id: string | null, name: string | null) => void;
+  setCustomer: (customer: Customer | null) => void;
   setPaymentMethod: (method: PaymentMethod) => void;
   setAmountPaid: (amount: number) => void;
   setDiscount: (discount: number) => void;
+  setDiscountType: (type: "flat" | "percentage") => void;
   clearCart: () => void;
 };
 
@@ -35,11 +36,11 @@ export type CartStore = CartState & CartActions;
 
 export const defaultInitState: CartState = {
   items: [],
-  customerId: null,
-  customerName: null,
+  customer: null,
   paymentMethod: "cash",
   amountPaid: 0,
   discountPaise: 0,
+  discountType: "flat",
 };
 
 export const createCartStore = (initState: CartState = defaultInitState) =>
@@ -79,23 +80,23 @@ export const createCartStore = (initState: CartState = defaultInitState) =>
         items: state.items.filter((i) => i.productId !== productId),
       })),
 
-    setCustomer: (id, name) =>
+    setCustomer: (customer) =>
       set((state) => {
-        const base = { customerId: id, customerName: name };
         // If removing a customer who was on credit, reset payment method
-        if (!id && state.paymentMethod === "credit") {
+        if (!customer && state.paymentMethod === "credit") {
           return {
-            ...base,
+            customer,
             paymentMethod: "cash" as PaymentMethod,
             amountPaid: getCartTotal(state.items, state.discountPaise),
           };
         }
-        return base;
+        return { customer };
       }),
 
     setPaymentMethod: (method) => set({ paymentMethod: method }),
     setAmountPaid: (amount) => set({ amountPaid: amount }),
     setDiscount: (discount) => set({ discountPaise: discount }),
+    setDiscountType: (type) => set({ discountType: type }),
     clearCart: () => set(defaultInitState),
   }));
 

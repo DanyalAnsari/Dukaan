@@ -1,15 +1,14 @@
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
 import { formatCurrency } from "@/lib/utils";
 import { CustomersDataTable } from "./_components/data-table";
 import CreateCustomerDialog from "./_components/create-customer-dialog";
 import StatsCard from "@/components/shared/stats-card";
 import { getActiveCustomers } from "@/database/data/customers";
 import { IndianRupee, User, Users } from "lucide-react";
+import { SendRemindersButton } from "./_components/send-reminders-button";
+import { requireShop } from "@/lib/require-shop";
 
 export default async function CustomersPage() {
-  const session = await getSession();
-  const shop = (await getShopByUserId(session!.user.id))!;
+  const { shop } = await requireShop();
 
   // Fetch active customers from data layer
   const allCustomers = await getActiveCustomers(shop.id);
@@ -60,7 +59,7 @@ export default async function CustomersPage() {
             Manage your customers.
           </p>
         </div>
-        <CreateCustomerDialog />
+        <div className="flex flex-wrap gap-2"><SendRemindersButton customers={allCustomers} shopName={shop.name} /><CreateCustomerDialog /></div>
       </div>
 
       {/* Stats */}

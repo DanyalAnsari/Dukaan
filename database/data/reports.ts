@@ -1,5 +1,5 @@
 import { db } from "@/database";
-import { sql, eq, and, gte, lte } from "drizzle-orm";
+import { sql, eq, and, gte, lte, asc } from "drizzle-orm";
 import { bills, billItems } from "@/database/schemas";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ export async function getMonthlySalesReport(
       sql`TO_CHAR(${bills.billDate}, 'YYYY-MM')`,
       sql`TO_CHAR(${bills.billDate}, 'Mon YYYY')`
     )
-    .orderBy(sql`TO_CHAR(${bills.billDate}, 'YYYY-MM') ASC`);
+    .orderBy(asc(sql`TO_CHAR(${bills.billDate}, 'YYYY-MM')`));
 
   return rows;
 }

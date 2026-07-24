@@ -3,19 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/database";
 import { shops } from "@/database/schemas";
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
 import { shopSettingsSchema, ShopSettingsSchema } from "./schema";
-import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
+import { requireShopRole } from "@/lib/require-shop";
 
 export async function updateShopSettingsAction(data: ShopSettingsSchema) {
   try {
-    const session = await getSession();
-    if (!session?.user) redirect("/login");
-
-    const shop = await getShopByUserId(session.user.id);
-    if (!shop) redirect("/setup");
+    const { shop } = await requireShopRole(["owner"]);
 
     const result = shopSettingsSchema.safeParse(data);
     if (!result.success) {

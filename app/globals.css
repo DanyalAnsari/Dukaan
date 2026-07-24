@@ -5,107 +5,108 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Light mode */
-  --background: #fafaf7;
-  --foreground: #1c1917;
+  /* Light — warm, soft, breathable */
+  --background: #f2f0ed;
+  --foreground: #1a1a1a;
   --card: #ffffff;
-  --card-foreground: #1c1917;
+  --card-foreground: #1a1a1a;
   --popover: #ffffff;
-  --popover-foreground: #1c1917;
-  --primary: #166534;
+  --popover-foreground: #1a1a1a;
+  --primary: #0d9488;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f0;
-  --secondary-foreground: #1c1917;
-  --muted: #f4f4f0;
-  --muted-foreground: #57534e;
-  --accent: #f4f4f0;
-  --accent-foreground: #1c1917;
-  --destructive: #dc2626;
+  --secondary: #eae8e4;
+  --secondary-foreground: #1a1a1a;
+  --muted: #eae8e4;
+  --muted-foreground: #78716c;
+  --accent: #e6f7f5;
+  --accent-foreground: #0f766e;
+  --destructive: #e11d48;
   --destructive-foreground: #ffffff;
-  --border: #e5e5e0;
-  --border-strong: #d0d0c8;
-  --input: #e5e5e0;
-  --ring: #166534;
-  --surface-raised: #f4f4f0;
+  --border: #ddd9d5;
+  --border-strong: #ccc8c3;
+  --input: #ddd9d5;
+  --ring: #0d9488;
+  --surface-raised: #f7f6f3;
 
-  /* Status colors */
-  --status-paid-bg: #f0fdf4;
-  --status-paid-text: #16a34a;
-  --status-partial-bg: #fffbeb;
-  --status-partial-text: #d97706;
-  --status-unpaid-bg: #fef2f2;
-  --status-unpaid-text: #dc2626;
-  --status-draft-bg: #f5f5f0;
-  --status-draft-text: #57534e;
+  /* Status */
+  --status-paid-bg: #ecfdf5;
+  --status-paid-text: #059669;
+  --status-partial-bg: #fefce8;
+  --status-partial-text: #b45309;
+  --status-unpaid-bg: #fff1f2;
+  --status-unpaid-text: #be123c;
+  --status-draft-bg: #eae8e4;
+  --status-draft-text: #78716c;
 
-  /* Radius */
   --radius: 0px;
 
   /* Sidebar */
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1c1917;
-  --sidebar-primary: #166534;
+  --sidebar: #f7f6f3;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #0d9488;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f0fdf4;
-  --sidebar-accent-foreground: #166534;
-  --sidebar-border: #e5e5e0;
-  --sidebar-ring: #166534;
+  --sidebar-accent: #e6f7f5;
+  --sidebar-accent-foreground: #0f766e;
+  --sidebar-border: #ddd9d5;
+  --sidebar-ring: #0d9488;
 
-  /* Chart colors */
-  --chart-1: #166534;
-  --chart-2: #d97706;
-  --chart-3: #0369a1;
-  --chart-4: #dc2626;
+  /* Charts */
+  --chart-1: #0d9488;
+  --chart-2: #e47911;
+  --chart-3: #2563eb;
+  --chart-4: #e11d48;
   --chart-5: #7c3aed;
 }
 
 .dark {
-  /* Dark mode */
-  --background: #0f1410;
-  --foreground: #f5f5f0;
-  --card: #161d17;
-  --card-foreground: #f5f5f0;
-  --popover: #161d17;
-  --popover-foreground: #f5f5f0;
-  --primary: #4ade80;
-  --primary-foreground: #0f1410;
-  --secondary: #1c2620;
-  --secondary-foreground: #f5f5f0;
-  --muted: #1c2620;
-  --muted-foreground: #a3b8a6;
-  --accent: #1c2620;
-  --accent-foreground: #f5f5f0;
-  --destructive: #dc2626;
-  --destructive-foreground: #f5f5f0;
-  --border: #2a3a2e;
-  --border-strong: #374d3c;
-  --input: #2a3a2e;
-  --ring: #4ade80;
-  --surface-raised: #1c2620;
+  /* Dark — deep, warm, layered surfaces */
+  --background: #161615;
+  --foreground: #f5f5f4;
+  --card: #1e1e1d;
+  --card-foreground: #f5f5f4;
+  --popover: #242423;
+  --popover-foreground: #f5f5f4;
+  --primary: #2dd4bf;
+  --primary-foreground: #042f2e;
+  --secondary: #242423;
+  --secondary-foreground: #f5f5f4;
+  --muted: #242423;
+  --muted-foreground: #a8a29e;
+  --accent: #12302d;
+  --accent-foreground: #5eead4;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
+  --border: #2e2e2c;
+  --border-strong: #3d3d3a;
+  --input: #2e2e2c;
+  --ring: #2dd4bf;
+  --surface-raised: #1e1e1d;
 
-  /* Status colors */
-  --status-paid-bg: #14241a;
-  --status-paid-text: #4ade80;
-  --status-partial-bg: #1c1500;
+  /* Status */
+  --status-paid-bg: #052e1c;
+  --status-paid-text: #34d399;
+  --status-partial-bg: #1c1106;
   --status-partial-text: #fbbf24;
-  --status-unpaid-bg: #1c0a0a;
-  --status-unpaid-text: #f87171;
+  --status-unpaid-bg: #200a10;
+  --status-unpaid-text: #fb7185;
+  --status-draft-bg: #242423;
+  --status-draft-text: #a8a29e;
 
   /* Sidebar */
-  --sidebar: #161d17;
-  --sidebar-foreground: #f5f5f0;
-  --sidebar-primary: #4ade80;
-  --sidebar-primary-foreground: #0f1410;
-  --sidebar-accent: #14241a;
-  --sidebar-accent-foreground: #4ade80;
-  --sidebar-border: #2a3a2e;
-  --sidebar-ring: #4ade80;
+  --sidebar: #1a1a19;
+  --sidebar-foreground: #f5f5f4;
+  --sidebar-primary: #2dd4bf;
+  --sidebar-primary-foreground: #042f2e;
+  --sidebar-accent: #12302d;
+  --sidebar-accent-foreground: #5eead4;
+  --sidebar-border: #2e2e2c;
+  --sidebar-ring: #2dd4bf;
 
-  /* Chart colors */
-  --chart-1: #4ade80;
-  --chart-2: #fbbf24;
-  --chart-3: #38bdf8;
-  --chart-4: #f87171;
+  /* Charts */
+  --chart-1: #2dd4bf;
+  --chart-2: #fb923c;
+  --chart-3: #60a5fa;
+  --chart-4: #fb7185;
   --chart-5: #a78bfa;
 }
 
@@ -147,24 +148,38 @@
   --color-background: var(--background);
   --color-surface-raised: var(--surface-raised);
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Generous rounding — soft material feel */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+  /* Soft layered shadows — neumorphic-inspired depth */
+  --shadow-sm:
+    0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  --shadow-md:
+    0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  --shadow-lg:
+    0 12px 40px -8px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1,
@@ -175,6 +190,7 @@
   h6 {
     @apply font-heading tracking-tight;
   }
+
   html {
     @apply font-sans;
     scroll-behavior: smooth;
@@ -185,30 +201,26 @@
   }
 
   ::selection {
-    @apply bg-primary/20 text-foreground;
+    @apply bg-primary/15 text-foreground;
   }
 }
 
-/* Custom scrollbar for webkit */
+/* Scrollbar — pill style, subtle */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
   background: var(--border-strong);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }
 
-/* Print styles */
 @media print {
   .print\:hidden {
     display: none !important;
@@ -228,7 +240,6 @@
   .text-paid {
     @apply text-(--status-paid-text);
   }
-
   .bg-unpaid {
     @apply bg-(--status-unpaid-bg);
   }
@@ -241,7 +252,6 @@
   .text-partial {
     @apply text-(--status-partial-text);
   }
-
   .bg-draft {
     @apply bg-(--status-draft-bg);
   }
@@ -249,15 +259,101 @@
     @apply text-(--status-draft-text);
   }
 
+  /* Soft card — the core neumorphic-lite style */
+  .card-soft {
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    box-shadow:
+      0 4px 12px -2px rgba(0, 0, 0, 0.06),
+      0 2px 4px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    border: 1px solid var(--border);
+    transition:
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .card-soft:hover {
+    box-shadow:
+      0 8px 24px -4px rgba(0, 0, 0, 0.08),
+      0 4px 8px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transform: translateY(-1px);
+  }
+
+  /* Pressed/active card — inset effect */
+  .card-pressed {
+    background: var(--surface-raised);
+    border-radius: var(--radius-lg);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.06),
+      inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--border);
+  }
+
+  /* Soft input — inset field style */
+  .input-soft {
+    background: var(--surface-raised);
+    border-radius: var(--radius-md);
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.04),
+      inset 0 0 0 1px var(--border);
+    border: none;
+    transition: box-shadow 0.15s ease;
+  }
+
+  .input-soft:focus {
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.04),
+      inset 0 0 0 1px var(--ring),
+      0 0 0 3px rgba(13, 148, 136, 0.12);
+  }
+
+  /* Soft button — raised, pressable */
+  .btn-soft {
+    border-radius: var(--radius-md);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.06),
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition:
+      box-shadow 0.15s ease,
+      transform 0.1s ease;
+  }
+
+  .btn-soft:hover {
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.08),
+      0 2px 4px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: translateY(-0.5px);
+  }
+
+  .btn-soft:active {
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.08),
+      inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    transform: translateY(0.5px);
+  }
+
+  /* Status pill — soft rounded badges */
+  .pill-soft {
+    border-radius: 99px;
+    padding: 2px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
   .fade-in {
-    animation: fadeIn 0.5s ease-out;
+    animation: fadeIn 0.2s ease-out;
   }
 
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
@@ -265,11 +361,71 @@
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(4px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
     }
   }
+}
+
+/* ─── Dark mode shadow overrides ─────────────────────────────────────────── */
+/* In dark mode, inset white highlights make no sense — swap to subtle light edges */
+
+.dark .card-soft {
+  box-shadow:
+    0 4px 12px -2px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.dark .card-soft:hover {
+  box-shadow:
+    0 8px 24px -4px rgba(0, 0, 0, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.dark .card-pressed {
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.dark .input-soft {
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px var(--border);
+}
+
+.dark .input-soft:focus {
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px var(--ring),
+    0 0 0 3px rgba(45, 212, 191, 0.15);
+}
+
+.dark .btn-soft {
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.dark .btn-soft:hover {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.dark .btn-soft:active {
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.dark .pill-soft {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }

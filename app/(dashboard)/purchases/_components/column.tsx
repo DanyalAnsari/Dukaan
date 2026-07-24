@@ -4,8 +4,11 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { DataTableColumnHeader } from "@/components/data-table";
 import { formatCurrency } from "@/lib/utils";
+import type { getAllPurchases } from "@/database/data/purchases";
 
-export const purchaseColumns: ColumnDef<any>[] = [
+type PurchaseWithProduct = Awaited<ReturnType<typeof getAllPurchases>>[number];
+
+export const purchaseColumns: ColumnDef<PurchaseWithProduct>[] = [
   {
     accessorKey: "purchaseDate",
     header: ({ column }) => (
