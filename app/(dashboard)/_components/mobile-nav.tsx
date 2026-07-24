@@ -3,9 +3,9 @@
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Package,
   PlusCircle,
   Receipt,
+  Settings,
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
@@ -16,7 +16,7 @@ const navItems = [
   { label: "Bills", icon: Receipt, href: "/bills" },
   { label: "Quick Bill", icon: PlusCircle, href: "/bills/new", primary: true },
   { label: "Reports", icon: TrendingUp, href: "/reports" },
-  { label: "More", icon: Package, href: "/products" },
+  { label: "Settings", icon: Settings, href: "/settings" },
 ];
 
 export default function MobileNav() {

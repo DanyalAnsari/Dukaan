@@ -1,7 +1,7 @@
 "use client";
 
 import { Path, useForm } from "react-hook-form";
-import { SetupFormValues } from "../_lib/schema";
+import { SetupFormInput, SetupFormValues } from "../_lib/schema";
 import {
   Field,
   FieldDescription,
@@ -27,7 +27,7 @@ export default function SetupInputField({
   description?: string;
   className?: string;
   disabled?: boolean;
-  register: ReturnType<typeof useForm<SetupFormValues>>["register"];
+  register: ReturnType<typeof useForm<SetupFormInput>>["register"];
   error?: { message?: string };
 }) {
   return (

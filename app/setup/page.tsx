@@ -85,6 +85,14 @@ const INPUTS: InputConfig[] = [
     step: 1,
   },
   {
+    name: "defaultGstRate",
+    label: "Default GST Rate (%)",
+    placeholder: "18",
+    className: "font-mono",
+    description: "Most common rates: 0, 5, 12, 18, 28",
+    step: 1,
+  },
+  {
     name: "upiId",
     label: "UPI ID for Payments",
     placeholder: "shopname@okicici",
@@ -117,6 +125,7 @@ export default function SetupPage() {
       phone: "",
       pan: "",
       gstin: "",
+      defaultGstRate: 18,
       upiId: "",
       invoicePrefix: "INV-",
       address: "",
