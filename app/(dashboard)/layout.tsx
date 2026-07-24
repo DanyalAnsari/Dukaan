@@ -1,23 +1,20 @@
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/get-session";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import DashboardSidebar from "./_components/dashboard-sidebar";
-import { getShopByUserId } from "@/database/data/shop";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import BackLink from "@/components/shared/back-link";
 import MobileNav from "./_components/mobile-nav";
+import { requireShop } from "@/lib/require-shop";
+import { getShopPlan } from "@/lib/plan-limits";
+import { TrialBanner } from "@/components/shared/trial-banner";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
-  if (!session) redirect("/login");
-
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
+  const { session, shop } = await requireShop();
+  const plan = await getShopPlan(shop.organizationId);
 
   return (
     <SidebarProvider>
@@ -36,6 +33,7 @@ export default async function DashboardLayout({
             <ThemeToggle />
           </div>
         </header>
+        {plan.status === "trialing" && <TrialBanner trialEndsAt={plan.trialEndsAt} />}
         <main className="p-4 lg:p-6">{children}</main>
       </div>
       <MobileNav />

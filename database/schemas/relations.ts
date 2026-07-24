@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { account, session, user } from "./auth";
+import { account, member, organization, session, user } from "./auth";
 import {
   billItems,
   bills,
@@ -8,12 +8,26 @@ import {
   products,
   purchases,
   shops,
+  stockAdjustments,
 } from "./business";
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   shops: many(shops),
+  memberships: many(member),
+}));
+
+export const organizationRelations = relations(organization, ({ many }) => ({
+  members: many(member),
+}));
+
+export const memberRelations = relations(member, ({ one }) => ({
+  organization: one(organization, {
+    fields: [member.organizationId],
+    references: [organization.id],
+  }),
+  user: one(user, { fields: [member.userId], references: [user.id] }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -40,6 +54,7 @@ export const shopRelations = relations(shops, ({ one, many }) => ({
   bills: many(bills),
   payments: many(payments),
   purchases: many(purchases),
+  stockAdjustments: many(stockAdjustments),
 }));
 
 export const productRelations = relations(products, ({ one, many }) => ({
@@ -49,6 +64,7 @@ export const productRelations = relations(products, ({ one, many }) => ({
   }),
   billItems: many(billItems),
   purchases: many(purchases),
+  stockAdjustments: many(stockAdjustments),
 }));
 
 export const customerRelations = relations(customers, ({ one, many }) => ({
@@ -68,6 +84,10 @@ export const billRelations = relations(bills, ({ one, many }) => ({
   customer: one(customers, {
     fields: [bills.customerId],
     references: [customers.id],
+  }),
+  createdBy: one(user, {
+    fields: [bills.createdByUserId],
+    references: [user.id],
   }),
   items: many(billItems),
   payments: many(payments),
@@ -97,6 +117,10 @@ export const paymentRelations = relations(payments, ({ one }) => ({
     fields: [payments.billId],
     references: [bills.id],
   }),
+  recordedBy: one(user, {
+    fields: [payments.recordedByUserId],
+    references: [user.id],
+  }),
 }));
 
 export const purchaseRelations = relations(purchases, ({ one }) => ({
@@ -106,6 +130,17 @@ export const purchaseRelations = relations(purchases, ({ one }) => ({
   }),
   product: one(products, {
     fields: [purchases.productId],
+    references: [products.id],
+  }),
+}));
+
+export const stockAdjustmentRelations = relations(stockAdjustments, ({ one }) => ({
+  shop: one(shops, {
+    fields: [stockAdjustments.shopId],
+    references: [shops.id],
+  }),
+  product: one(products, {
+    fields: [stockAdjustments.productId],
     references: [products.id],
   }),
 }));

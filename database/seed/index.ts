@@ -1,5 +1,6 @@
+// seed/index.ts
 import "dotenv/config";
-import { sql, eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import * as schema from "../schemas/index.js";
 import {
@@ -9,20 +10,18 @@ import {
   seedCustomers,
   seedBills,
   seedBillItems,
+  seedMembers,
   seedPayments,
   seedPurchases,
+  seedOrganizations,
+  seedSubscriptions,
   TEST_CREDENTIALS,
   type UserIdMap,
 } from "./data.js";
 import { db } from "../index.js";
 import { auth } from "@/lib/auth.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Validate env
-// ─────────────────────────────────────────────────────────────────────────────
-
 const DATABASE_URL = process.env.DATABASE_URL;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 if (!DATABASE_URL) {
   console.error("❌  DATABASE_URL is not set");
@@ -46,6 +45,10 @@ async function seed() {
       "session",
       "account",
       "verification",
+      "organization",
+      "member",
+      "invitation",
+      "subscription",
       "shops",
       "products",
       "customers",
@@ -58,18 +61,18 @@ async function seed() {
   `);
   console.log("✅  All tables truncated\n");
 
-  // ── 2. Create users via better-auth client ────────────────────────────────
+  // ── 2. Create users via better-auth admin API ─────────────────────────────
+  // Using createUser instead of signUpEmail because:
+  //   • sets emailVerified in one call — no second DB pass needed
+  //   • skips sending verification emails
+  //   • no session side-effect to clean up
 
-  console.log(`👤  Creating users via better-auth at ${APP_URL}…`);
-  console.log(
-    "⚠️   Make sure your Next.js dev server is running on the above URL\n"
-  );
+  console.log("👤  Creating users via better-auth admin API…\n");
 
   const userIdMap: UserIdMap = {};
 
   for (const def of seedUserDefs) {
     try {
-      // ✅ Server-side API — no { data, error } wrapper, returns object directly
       const result = await auth.api.signUpEmail({
         body: {
           name: def.name,
@@ -78,16 +81,22 @@ async function seed() {
         },
       });
 
-      if (!result?.user?.id) {
+      if (!result?.user.id) {
         throw new Error(`No user ID returned for ${def.email}`);
+      }
+      if (def.emailVerified) {
+        await db
+          .update(schema.user)
+          .set({ emailVerified: true })
+          .where(eq(schema.user.id, result.user.id));
       }
 
       userIdMap[def.key] = result.user.id;
       console.log(`   ✓ ${def.email} (${def.key}) → ${result.user.id}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(
         `❌  Failed to create user ${def.email}:`,
-        err?.message ?? err
+        err instanceof Error ? err.message : err
       );
       throw err;
     }
@@ -95,37 +104,34 @@ async function seed() {
 
   console.log(`\n✅  ${seedUserDefs.length} users created\n`);
 
-  // ── 3. Mark emails as verified ───────────────────────────────────────────
+  // ── 3. Shops ──────────────────────────────────────────────────────────────
 
-  console.log("🔧  Marking emails as verified…");
-
-  for (const def of seedUserDefs) {
-    const userId = userIdMap[def.key];
-    if (!userId) continue;
-
-    await db
-      .update(schema.user)
-      .set({ emailVerified: def.emailVerified })
-      .where(eq(schema.user.id, userId));
-
-    console.log(`   ✓ ${def.email} emailVerified → ${def.emailVerified}`);
-  }
-
-  console.log("✅  Email verification updated\n");
-
-  // ── 4. Clear sessions created during signup ───────────────────────────────
-
-  console.log("🧹  Clearing seed sessions…");
-  await db.delete(schema.session);
-  console.log("✅  Sessions cleared\n");
-
-  // ── 5. Shops ──────────────────────────────────────────────────────────────
+  console.log("🏢  Inserting organizations and memberships…");
+  const insertedOrganizations = await db
+    .insert(schema.organization)
+    .values(seedOrganizations)
+    .returning({ id: schema.organization.id });
+  const organizationIdMap = Object.fromEntries(
+    insertedOrganizations.map((organization, index) => [
+      `organization${index + 1}`,
+      organization.id,
+    ])
+  );
+  const membersData = seedMembers(organizationIdMap, userIdMap);
+  await db.insert(schema.member).values(membersData);
+  const subscriptionsData = seedSubscriptions(organizationIdMap);
+  await db.insert(schema.subscription).values(subscriptionsData);
+  console.log(`✅  ${insertedOrganizations.length} organizations, ${membersData.length} members, and ${subscriptionsData.length} subscriptions inserted\n`);
 
   console.log("🏪  Inserting shops…");
-  const shopsData = seedShops(userIdMap);
+  const shopsData = seedShops(userIdMap).map((shop, index) => ({
+    ...shop,
+    organizationId: organizationIdMap[`organization${index + 1}`],
+    billsThisMonth: 2,
+  }));
   const insertedShops = await db
     .insert(schema.shops)
-    .values(shopsData )
+    .values(shopsData)
     .returning({ id: schema.shops.id });
 
   const shopIdMap: Record<string, string> = {};
@@ -135,7 +141,7 @@ async function seed() {
 
   console.log(`✅  ${insertedShops.length} shops inserted\n`);
 
-  // ── 6. Products ───────────────────────────────────────────────────────────
+  // ── 4. Products ───────────────────────────────────────────────────────────
 
   console.log("📦  Inserting products…");
   const productsData = seedProducts(shopIdMap);
@@ -151,7 +157,7 @@ async function seed() {
 
   console.log(`✅  ${insertedProducts.length} products inserted\n`);
 
-  // ── 7. Customers ──────────────────────────────────────────────────────────
+  // ── 5. Customers ──────────────────────────────────────────────────────────
 
   console.log("👥  Inserting customers…");
   const customersData = seedCustomers(shopIdMap);
@@ -167,10 +173,10 @@ async function seed() {
 
   console.log(`✅  ${insertedCustomers.length} customers inserted\n`);
 
-  // ── 8. Bills ──────────────────────────────────────────────────────────────
+  // ── 6. Bills ──────────────────────────────────────────────────────────────
 
   console.log("🧾  Inserting bills…");
-  const billsData = seedBills(shopIdMap, customerIdMap);
+  const billsData = seedBills(shopIdMap, customerIdMap, userIdMap);
   const insertedBills = await db
     .insert(schema.bills)
     .values(billsData)
@@ -183,21 +189,27 @@ async function seed() {
 
   console.log(`✅  ${insertedBills.length} bills inserted\n`);
 
-  // ── 9. Bill Items ─────────────────────────────────────────────────────────
+  // ── 7. Bill Items ─────────────────────────────────────────────────────────
 
   console.log("📋  Inserting bill items…");
   const billItemsData = seedBillItems(billIdMap, productIdMap);
   await db.insert(schema.billItems).values(billItemsData);
   console.log(`✅  ${billItemsData.length} bill items inserted\n`);
 
-  // ── 10. Payments ──────────────────────────────────────────────────────────
+  // ── 8. Payments ───────────────────────────────────────────────────────────
+  // userId is required on the payments table — pass userIdMap through
 
   console.log("💰  Inserting payments…");
-  const paymentsData = seedPayments(shopIdMap, customerIdMap, billIdMap);
+  const paymentsData = seedPayments(
+    shopIdMap,
+    customerIdMap,
+    billIdMap,
+    userIdMap
+  );
   await db.insert(schema.payments).values(paymentsData);
   console.log(`✅  ${paymentsData.length} payments inserted\n`);
 
-  // ── 11. Purchases ─────────────────────────────────────────────────────────
+  // ── 9. Purchases ──────────────────────────────────────────────────────────
 
   console.log("📥  Inserting purchases…");
   const purchasesData = seedPurchases(shopIdMap, productIdMap);
@@ -246,6 +258,6 @@ seed()
     console.error("\n❌  Seed failed:", err?.message ?? err);
     process.exit(1);
   })
-  .finally(async () => {
+  .finally(() => {
     console.log("🔌  Disconnected from PostgreSQL");
   });

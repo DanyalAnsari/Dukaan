@@ -36,10 +36,13 @@ export default function LoginForm() {
 
   async function onSubmit(data: LoginSchema) {
     try {
+      const callbackURL =
+        new URLSearchParams(window.location.search).get("callbackUrl") ??
+        "/dashboard";
       await signIn.email({
         email: data.email,
         password: data.password,
-        callbackURL: "/dashboard",
+        callbackURL,
         fetchOptions: {
           onSuccess: async (ctx) => {
             const name = ctx.data.user?.name?.trim();
