@@ -1,12 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { Bill, Shop } from "@/types";
 import { FileText, Printer, Share2, Banknote } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { BillPaymentDialog } from "./bill-payment-dialog";
+import { invoiceWhatsAppMessage } from "@/lib/whatsapp";
 
 export default function CTAbuttons({
   bill,
@@ -25,7 +26,7 @@ export default function CTAbuttons({
 
   const handleWhatsAppShare = () => {
     if (!shop) return;
-    const message = `🧾 *Invoice ${bill.invoiceNumber}*\n\n*${shop.name}*\nDate: ${formatDate(new Date(bill.billDate))}\n\nTotal: *${formatCurrency(bill.totalPaise)}*\nStatus: ${bill.status?.toUpperCase()}\n\nThank you for your business!`;
+    const message = invoiceWhatsAppMessage({ shopName: shop.name, invoiceNumber: bill.invoiceNumber, total: formatCurrency(bill.totalPaise), url: `${window.location.origin}/invoice/${id}` });
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`);
   };
 

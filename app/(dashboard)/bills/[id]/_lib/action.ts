@@ -2,13 +2,11 @@
 
 import { db } from "@/database";
 import { payments, customers, bills } from "@/database/schemas";
-import { getSession } from "@/lib/get-session";
 import { eq, and, sql } from "drizzle-orm";
-import { getShopByUserId } from "@/database/data/shop";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { redirect } from "next/navigation";
 import { PAYMENT_METHODS } from "@/constants";
+import { requireShop } from "@/lib/require-shop";
 
 const paymentSchema = z.object({
   customerId: z.uuid("Invalid customer ID"),
@@ -26,11 +24,7 @@ export type PaymentOutput = z.output<typeof paymentSchema>;
 export type PaymentSchema = z.infer<typeof paymentSchema>;
 
 export async function resolveBillPaymentAction(data: PaymentInput) {
-  const session = await getSession();
-  if (!session) redirect("/login");
-
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
+  const { shop, session } = await requireShop();
 
   const result = paymentSchema.safeParse(data);
   if (!result.success) {
@@ -49,9 +43,21 @@ export async function resolveBillPaymentAction(data: PaymentInput) {
   const shopId = shop.id;
   const amountInPaise = Math.round(amountPaise);
 
-  console.log(amountInPaise);
   try {
     await db.transaction(async (tx) => {
+      const customer = await tx.query.customers.findFirst({
+        where: and(eq(customers.id, customerId), eq(customers.shopId, shopId)),
+      });
+      if (!customer) throw new Error("Customer not found.");
+
+      const bill = await tx.query.bills.findFirst({
+        where: and(eq(bills.id, billId), eq(bills.shopId, shopId)),
+      });
+      if (!bill || bill.customerId !== customerId) throw new Error("Bill not found.");
+      if (amountInPaise > (bill.amountDuePaise ?? 0)) {
+        throw new Error("Payment cannot exceed the outstanding balance.");
+      }
+
       // reference number of transaction for upi bank in future
       await tx.insert(payments).values({
         shopId,
@@ -60,6 +66,7 @@ export async function resolveBillPaymentAction(data: PaymentInput) {
         amountPaise,
         paymentMethod,
         notes: notes ?? null,
+        recordedByUserId: session.user.id,
       });
 
       // Update customer's outstanding balance
@@ -68,15 +75,9 @@ export async function resolveBillPaymentAction(data: PaymentInput) {
         .set({
           outstandingBalancePaise: sql`outstanding_balance_paise - ${amountInPaise}`,
         })
-        .where(eq(customers.id, customerId));
+        .where(and(eq(customers.id, customerId), eq(customers.shopId, shopId)));
 
       //  update that bill's status
-
-      const bill = await tx.query.bills.findFirst({
-        where: and(eq(bills.id, billId), eq(bills.shopId, shopId)),
-      });
-
-      if (!bill) throw new Error(`Bill not found.`);
 
       const newPaidAmount = (bill.amountPaidPaise ?? 0) + amountInPaise;
       const newStatus =
@@ -85,8 +86,6 @@ export async function resolveBillPaymentAction(data: PaymentInput) {
           : newPaidAmount > 0
             ? "partial"
             : "credit";
-      console.log("newPaidpaise:", newPaidAmount);
-      console.log("newStatus:", newStatus);
       await tx
         .update(bills)
         .set({
@@ -94,7 +93,7 @@ export async function resolveBillPaymentAction(data: PaymentInput) {
           amountDuePaise: Math.max(0, bill.totalPaise - newPaidAmount),
           status: newStatus,
         })
-        .where(eq(bills.id, billId));
+        .where(and(eq(bills.id, billId), eq(bills.shopId, shopId)));
     });
 
     revalidatePath(`/bills/${billId}`);

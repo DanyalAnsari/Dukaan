@@ -1,21 +1,15 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Plus, Package, TrendingUp, BoxesIcon } from "lucide-react";
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
 import { getAllPurchases } from "@/database/data/purchases";
 import { Button } from "@/components/ui/button";
 import StatsCard from "@/components/shared/stats-card";
 import { DataTable } from "@/components/data-table";
 import { purchaseColumns } from "./_components/column";
 import { formatCurrency } from "@/lib/utils";
+import { requireShop } from "@/lib/require-shop";
 
 export default async function PurchasesPage() {
-  const session = await getSession();
-  if (!session?.user) redirect("/login");
-
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
+  const { shop } = await requireShop();
 
   const allPurchases = await getAllPurchases(shop.id);
 

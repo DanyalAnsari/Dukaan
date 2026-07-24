@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
@@ -50,8 +50,8 @@ export function PaymentDialog({
     register,
     handleSubmit,
     setValue,
-    watch,
     reset,
+    control,
     formState: { errors },
   } = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
@@ -61,7 +61,7 @@ export function PaymentDialog({
     },
   });
 
-  const paymentMethod = watch("paymentMethod");
+  const paymentMethod = useWatch({ control, name: "paymentMethod" });
 
   function onSubmit(values: FormOutput) {
     startTransition(async () => {

@@ -12,7 +12,7 @@ export default function SubmitButton() {
   const router = useRouter();
   // Granular selector — only re-renders when these fields change
   const items = useCartStore((s) => s.items);
-  const customerId = useCartStore((s) => s.customerId);
+  const customer = useCartStore((s) => s.customer);
   const paymentMethod = useCartStore((s) => s.paymentMethod);
   const discountPaise = useCartStore((s) => s.discountPaise);
   const amountPaid = useCartStore((s) => s.amountPaid);
@@ -32,7 +32,7 @@ export default function SubmitButton() {
       );
       try {
         const result = await createBillAction({
-          customerId,
+          customerId: customer!.id,
           items,
           paymentMethod,
           discountPaise,

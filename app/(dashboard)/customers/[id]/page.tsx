@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { eq, desc, and } from "drizzle-orm";
@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import CustomerActions from "./_components/customer-actions";
+import { requireShop } from "@/lib/require-shop";
 
 // ─── Metadata ────────────────────────────────────────────────────────────────
 
@@ -87,11 +88,7 @@ export default async function CustomerLedgerPage({ params }: PageProps) {
   const { id: customerId } = await params;
 
   // Explicit guards — no ! assertions
-  const session = await getSession();
-  if (!session?.user) redirect("/login");
-
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
+  const { shop } = await requireShop();
 
   // All three queries scoped to this shop — prevents cross-shop data leaks
   const [customerResult, customerBills, customerPayments] = await Promise.all([
@@ -100,6 +97,9 @@ export default async function CustomerLedgerPage({ params }: PageProps) {
     }),
     db.query.bills.findMany({
       where: and(eq(bills.customerId, customerId), eq(bills.shopId, shop.id)),
+      with: {
+        createdBy: true,
+      },
       orderBy: [desc(bills.billDate)],
     }),
     db.query.payments.findMany({
@@ -107,6 +107,10 @@ export default async function CustomerLedgerPage({ params }: PageProps) {
         eq(payments.customerId, customerId),
         eq(payments.shopId, shop.id)
       ),
+      with: {
+        bill: true,
+        recordedBy: true,
+      },
       orderBy: [desc(payments.createdAt)],
     }),
   ]);
@@ -202,6 +206,11 @@ export default async function CustomerLedgerPage({ params }: PageProps) {
                             >
                               {bill.invoiceNumber}
                             </Link>
+                            {bill.createdBy && (
+                              <div className="text-[10px] text-muted-foreground font-normal">
+                                By {bill.createdBy.name}
+                              </div>
+                            )}
                           </TableCell>
                           {/* billDate is already a JS Date from Drizzle — no new Date() needed */}
                           <TableCell className="text-muted-foreground">
@@ -250,14 +259,19 @@ export default async function CustomerLedgerPage({ params }: PageProps) {
                       key={payment.id}
                       className="flex items-center justify-between text-sm"
                     >
-                      <div>
-                        {/* createdAt is already a JS Date from Drizzle */}
+                      <div className="flex flex-col">
                         <div className="text-muted-foreground">
                           {formatDate(payment.createdAt)}
                         </div>
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {payment.paymentMethod}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {payment.paymentMethod}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {payment.bill ? `Bill: ${payment.bill.invoiceNumber}` : "General"}
+                            {payment.recordedBy && ` • By ${payment.recordedBy.name}`}
+                          </span>
+                        </div>
                       </div>
                       <span className="font-mono text-green-600">
                         +{formatCurrency(payment.amountPaise)}

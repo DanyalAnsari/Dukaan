@@ -239,9 +239,15 @@ export function ProductForm({
                     id="stockQty"
                     type="number"
                     min="0"
+                    disabled={!!initialData}
                     {...form.register("stockQty", { valueAsNumber: true })}
                     placeholder="Current quantity"
                   />
+                  {initialData && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      To adjust stock levels for existing products, please use the &quot;Adjust Stock&quot; tool in the products table.
+                    </p>
+                  )}
                   {errors.stockQty && <FieldError errors={[errors.stockQty]} />}
                 </Field>
                 <Field className="flex-1">

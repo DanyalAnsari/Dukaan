@@ -1,11 +1,9 @@
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
 import { getActiveProducts } from "@/database/data/products";
 import { NewPurchaseForm } from "./_components/new-purchase-form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { requireShop } from "@/lib/require-shop";
 
 interface PageProps {
   // searchParams is a Promise in Next.js 15+
@@ -13,11 +11,7 @@ interface PageProps {
 }
 
 export default async function NewPurchasePage({ searchParams }: PageProps) {
-  const session = await getSession();
-  if (!session?.user) redirect("/login");
-
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
+  const { shop } = await requireShop();
 
   const { productId: initialProductId } = await searchParams;
   const activeProducts = await getActiveProducts(shop.id);

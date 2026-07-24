@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/database";
-import { bills, shops } from "@/database/schemas";
+import { billItems, bills, customers, shops } from "@/database/schemas";
 import { getSession } from "@/lib/get-session";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import path from "path";
 import fs from "fs";
+import { getShopByUserId } from "@/database/data/shop";
+import { getShopPlan } from "@/lib/plan-limits";
 
 const fontPath = path.join(process.cwd(), "public/fonts/Roboto/static");
+type InvoiceBill = typeof bills.$inferSelect & {
+  items: Array<typeof billItems.$inferSelect>;
+  customer: typeof customers.$inferSelect | null;
+};
 
 // Verify fonts exist
 function verifyFonts() {
@@ -37,9 +43,17 @@ export async function GET(
     }
 
     const { id } = await params;
+    const currentShop = await getShopByUserId(session.user.id);
+    if (!currentShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+    const plan = await getShopPlan(currentShop.organizationId);
+    if (!plan.limits.pdfInvoices) {
+      return NextResponse.json({ error: "PDF invoices require Starter or Pro." }, { status: 403 });
+    }
 
     const bill = await db.query.bills.findFirst({
-      where: eq(bills.id, id),
+      where: and(eq(bills.id, id), eq(bills.shopId, currentShop.id)),
       with: { items: true, customer: true },
     });
 
@@ -123,7 +137,11 @@ export async function GET(
 }
 
 // ===== IMPROVED PDF LAYOUT =====
-function generatePDF(doc: PDFKit.PDFDocument, bill: any, shop: any) {
+function generatePDF(
+  doc: PDFKit.PDFDocument,
+  bill: InvoiceBill,
+  shop: typeof shops.$inferSelect
+) {
   const formatCurrency = (paise: number) => `₹${(paise / 100).toFixed(2)}`;
 
   const cgst = Math.floor(bill.gstTotalPaise / 2);
@@ -179,11 +197,6 @@ function generatePDF(doc: PDFKit.PDFDocument, bill: any, shop: any) {
 
   if (shop.phone) {
     doc.text(`Phone: ${shop.phone}`, margin, y);
-    y += 12;
-  }
-
-  if (shop.email) {
-    doc.text(`Email: ${shop.email}`, margin, y);
     y += 12;
   }
 
@@ -304,7 +317,7 @@ function generatePDF(doc: PDFKit.PDFDocument, bill: any, shop: any) {
   // Table Rows
   doc.font("Regular").fontSize(9);
 
-  bill.items.forEach((item: any, index: number) => {
+  bill.items.forEach((item, index) => {
     // Check if we need a new page
     if (y + rowHeight > pageHeight - 150) {
       doc.addPage();

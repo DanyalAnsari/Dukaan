@@ -1,12 +1,11 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import type { InferSelectModel } from "drizzle-orm";
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
 import { getProductById } from "@/database/data/products";
 import { products } from "@/database/schemas";
 import { updateProductAction } from "../../_lib/actions";
 import type { ProductSchema } from "../../_lib/schema";
 import { ProductForm } from "../../_components/product-form";
+import { requireShop } from "@/lib/require-shop";
 
 type Product = InferSelectModel<typeof products>;
 
@@ -17,11 +16,7 @@ interface Props {
 export default async function EditProductPage({ params }: Props) {
   const { id } = await params;
 
-  const session = await getSession();
-  if (!session?.user) redirect("/login");
-
-  const shop = await getShopByUserId(session.user.id);
-  if (!shop) redirect("/setup");
+  const { shop } = await requireShop();
 
   const product = await getProductById(id, shop.id);
   if (!product) notFound();

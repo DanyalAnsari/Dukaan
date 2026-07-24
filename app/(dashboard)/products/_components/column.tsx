@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { Edit, RefreshCw, Trash2 } from "lucide-react";
+import { Edit, RefreshCw, Trash2, Sliders } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTableColumnHeader } from "@/components/data-table";
@@ -19,6 +19,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { type Product } from "@/types";
 import Link from "next/link";
+import { AdjustStockDialog } from "./adjust-stock-dialog";
 
 // ---------------------------------------------------------------------------
 // Stock status helper
@@ -206,6 +207,15 @@ export function getProductColumns({
                 </Link>
               </Button>
             )}
+            <AdjustStockDialog
+              product={product}
+              trigger={
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Sliders className="h-4 w-4" />
+                  <span className="sr-only">Adjust Stock</span>
+                </Button>
+              }
+            />
             <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
               <Link href={`/products/${product.id}/edit`}>
                 <Edit className="h-4 w-4" />

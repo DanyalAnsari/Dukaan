@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { IndianRupee, Plus, Receipt } from "lucide-react";
 import { BillsDataTable } from "./_components/data-table";
 import StatsCard from "@/components/shared/stats-card";
-import { getSession } from "@/lib/get-session";
-import { getShopByUserId } from "@/database/data/shop";
 import { getAllBills, getBillsStat } from "@/database/data/bills";
+import { Metadata } from "next";
+import { requireShop } from "@/lib/require-shop";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Invoice",
   description: "View all your invoices and track payments.",
 };
@@ -21,8 +21,7 @@ export default async function BillsPage(props: {
   }>;
 }) {
   const searchParams = await props.searchParams;
-  const session = await getSession();
-  const shop = (await getShopByUserId(session!.user.id))!;
+  const { shop } = await requireShop();
 
   // Fetch filtered bills from data layer
   const [filteredBills, billStats] = await Promise.all([
